@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: se2026-monitoring
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: SUPABASE_URL
+        sync: false        # Diisi manual di dashboard Render
+      - key: SUPABASE_SERVICE_KEY
+        sync: false        # Diisi manual di dashboard Render (RAHASIA!)
+      - key: SUPABASE_BUCKET
+        value: se-monitoring
+      - key: PORT
+        value: "10000"

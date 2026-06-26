@@ -1,0 +1,7 @@
+.env
+.env.local
+*.log
+.DS_Store
+data/latest.json
+data/history/*.json
+!data/history/.gitkeep
