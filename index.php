@@ -463,6 +463,148 @@
         .cmp-subtitle.text-warning {
             color: #f59e0b !important;
         }
+
+        /* ============================= */
+        /* MOBILE — COMPACT MODE         */
+        /* ============================= */
+        @media (max-width: 768px) {
+
+            /* Hilangkan horizontal scroll body */
+            body { overflow-x: hidden; }
+
+            /* Header: stack vertikal, padat */
+            .header {
+                padding: 10px 12px;
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .logo { font-size: 15px; gap: 8px; }
+            .logo i { font-size: 22px; }
+            .sub-title { font-size: 10.5px; }
+
+            .header-right {
+                flex-wrap: wrap;
+                gap: 6px;
+                justify-content: flex-start;
+            }
+            .header-right > span {
+                font-size: 11px;
+                width: 100%;
+                order: -1;
+            }
+            .header-right > .d-flex {
+                flex: 1 1 100%;
+                padding: 4px 8px !important;
+            }
+            .header-right > .d-flex select#viewDate {
+                width: auto !important;
+                flex: 1;
+                font-size: 12px;
+            }
+            .header-right > .d-flex label { font-size: 11px; }
+
+            .btn-action {
+                padding: 6px 10px;
+                font-size: 12px;
+                border-radius: 8px;
+                line-height: 1.2;
+            }
+            .btn-action i { font-size: 13px; }
+
+            /* Container padding lebih kecil */
+            .container-dashboard { padding: 12px; }
+
+            /* Tighter gutter */
+            .row.g-4 { --bs-gutter-x: .6rem; --bs-gutter-y: .6rem; }
+            .row.mt-4 { margin-top: .75rem !important; }
+
+            /* KPI cards compact */
+            .kpi-card {
+                height: auto;
+                min-height: 88px;
+                padding: 12px 14px;
+                border-radius: 14px;
+            }
+            .kpi-card i {
+                font-size: 26px;
+                right: 12px;
+                top: 12px;
+            }
+            .kpi-title { font-size: 11px; margin-bottom: 4px; }
+            .kpi-value { font-size: 20px; }
+            .kpi-change { font-size: 10.5px; margin-top: 2px; }
+
+            /* Chart cards */
+            .chart-card {
+                padding: 14px;
+                border-radius: 14px;
+                margin-top: 14px;
+            }
+            .chart-title { font-size: 14px; margin-bottom: 8px; }
+            .section-title { font-size: 15px; }
+
+            /* Chart boxes — pendekkan supaya muat layar */
+            .chart-box { height: 280px; }
+
+            /* Performer list compact */
+            .performer-list { max-height: 320px; }
+            .performer-list .fw-semibold { font-size: 12.5px; }
+            .performer-list small { font-size: 10.5px; }
+            .performer-list .py-2 { padding-top: .35rem !important; padding-bottom: .35rem !important; }
+
+            /* Progress bar */
+            .progress { height: 16px; margin-top: 8px; }
+            .progress-bar { font-size: 11px; }
+
+            /* Comparison cards */
+            .cmp-section { margin-top: 14px; }
+            .cmp-card { padding: 12px; border-radius: 14px; }
+            .cmp-head { font-size: 11px; padding-bottom: 8px; margin-bottom: 6px; }
+            .cmp-head i { font-size: 14px; }
+            .cmp-row { font-size: 12px; padding: 8px 2px; }
+            .cmp-subtitle { font-size: 11px; }
+
+            /* Tabulator: compact + scroll horizontal sendiri */
+            .tabulator { border-radius: 10px; font-size: 11px; }
+            .tabulator .tabulator-header .tabulator-col,
+            .tabulator .tabulator-header .tabulator-col .tabulator-col-content {
+                padding: 4px 6px !important;
+            }
+            .tabulator-col-title { font-size: 11px !important; }
+            .tabulator-row .tabulator-cell,
+            .tabulator-cell {
+                padding: 4px 6px !important;
+                font-size: 11px !important;
+            }
+            .tabulator-row,
+            .tabulator .tabulator-row { min-height: 32px; }
+            .tabulator .tabulator-header .tabulator-col .tabulator-header-filter input {
+                padding: 2px 6px;
+                font-size: 11px;
+            }
+            .tabulator-paginator,
+            .tabulator-page,
+            .tabulator-page-size { font-size: 11px !important; padding: 2px 6px !important; }
+
+            /* Modal */
+            .modal-dialog { margin: .5rem; }
+            .modal-title { font-size: 15px; }
+
+            /* Footer */
+            footer small { font-size: 10.5px; }
+        }
+
+        /* Extra compact untuk HP sangat kecil */
+        @media (max-width: 420px) {
+            .kpi-value { font-size: 18px; }
+            .kpi-card i { font-size: 22px; }
+            .chart-box { height: 240px; }
+            .btn-action { padding: 5px 8px; font-size: 11.5px; }
+            .logo { font-size: 14px; }
+            .logo i { font-size: 20px; }
+        }
+
     </style>
 
 </head>
@@ -545,7 +687,7 @@
 
             foreach ($cards as $c) {
                 ?>
-                <div class="col-xl-3 col-lg-4 col-md-6">
+                <div class="col-6 col-md-6 col-lg-4 col-xl-3">
                     <div class="kpi-card">
                         <i class="bi <?= $c[2] ?>" style="color:<?= $c[3] ?>"></i>
                         <div class="kpi-title"><?= $c[0] ?></div>
