@@ -2,179 +2,230 @@
 |--------------------------------------------------------------------------
 | table.js (Tabulator)
 |--------------------------------------------------------------------------
+| Tab 1 : Ringkasan per Petugas (#gridTable)
+| Tab 2 : Detail per Kecamatan  (#gridTableDetail)
+|--------------------------------------------------------------------------
 */
 
-let table = null;
+let table = null;        // Tab 1 - per petugas
+let tableDetail = null;  // Tab 2 - per kecamatan
 
+/* ============================================================
+   Helper: formatter sel "Progress" — vertikal (bar atas, angka bawah)
+   ============================================================ */
+function progressCellFormatter(cell) {
+  const value = Number(cell.getValue()) || 0;
+
+  let color = "#dc3545"; // <40 merah
+  if (value >= 80) color = "#198754";       // hijau
+  else if (value >= 60) color = "#0d6efd";  // biru
+  else if (value >= 40) color = "#ffc107";  // kuning
+
+  return `
+    <div class="tbl-progress-wrap">
+      <div class="tbl-progress-track">
+        <div class="tbl-progress-fill" style="width:${value}%; background:${color};"></div>
+      </div>
+      <div class="tbl-progress-label" style="color:${color};">
+        ${value.toFixed(2)}%
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   Render Tab 1 — Ringkasan per Petugas (agregat)
+   ============================================================ */
 function renderTable() {
   const data = Dashboard.enumerators.map((e, index) => ({
     no: index + 1,
-
     username: e.username,
-
     district: [
       ...new Set(
         e.regions.map((r) => REGION_MAP[r.regionCode] || r.regionCode),
       ),
     ].join(", "),
-
     assignment: e.assignment,
-
     open: e.open,
-
     draft: e.draft,
-
     submitted: e.submitted,
-
     approved: e.approved,
-
     rejected: e.rejected,
-
     revoked: e.revoked,
-
     progress: Number(e.progressTotal.toFixed(2)),
   }));
 
-  if (table) {
-    table.destroy();
-  }
+  if (table) table.destroy();
 
   table = new Tabulator("#gridTable", {
     data: data,
-
     layout: "fitColumns",
-
     responsiveLayout: false,
-
     height: "650px",
-
     movableColumns: true,
-
     resizableColumns: true,
-
     pagination: true,
-
     paginationSize: 20,
-
     placeholder: "Tidak ada data",
 
     columns: [
-      {
-        title: "No",
-        field: "no",
-        hozAlign: "center",
-        width: 70,
-      },
-
-      {
-        title: "Username",
-        field: "username",
-        width: 260,
-        headerFilter: "input",
-      },
-
-      {
-        title: "Kecamatan",
-        field: "district",
-        width: 220,
-        headerFilter: "input",
-      },
-
-      {
-        title: "Assignment",
-        field: "assignment",
-        hozAlign: "right",
-      },
-
-      {
-        title: "Open",
-        field: "open",
-        hozAlign: "right",
-      },
-
-      {
-        title: "Draft",
-        field: "draft",
-        hozAlign: "right",
-      },
-
-      {
-        title: "Submitted",
-        field: "submitted",
-        hozAlign: "right",
-      },
-
-      {
-        title: "Approved",
-        field: "approved",
-        hozAlign: "right",
-      },
-
-      {
-        title: "Rejected",
-        field: "rejected",
-        hozAlign: "right",
-      },
-
-      {
-        title: "Revoked",
-        field: "revoked",
-        hozAlign: "right",
-      },
-
+      { title: "No", field: "no", hozAlign: "center", width: 60 },
+      { title: "Username", field: "username", width: 240, headerFilter: "input" },
+      { title: "Kecamatan", field: "district", width: 220, headerFilter: "input" },
+      { title: "Assignment", field: "assignment", hozAlign: "right" },
+      { title: "Open", field: "open", hozAlign: "right" },
+      { title: "Draft", field: "draft", hozAlign: "right" },
+      { title: "Submitted", field: "submitted", hozAlign: "right" },
+      { title: "Approved", field: "approved", hozAlign: "right" },
+      { title: "Rejected", field: "rejected", hozAlign: "right" },
+      { title: "Revoked", field: "revoked", hozAlign: "right" },
       {
         title: "Progress",
         field: "progress",
-        width: 170,
-        formatter: function (cell) {
-          const value = Number(cell.getValue());
-
-          let color = "#dc3545";
-
-          if (value >= 80) {
-            color = "#198754";
-          } else if (value >= 60) {
-            color = "#0d6efd";
-          } else if (value >= 40) {
-            color = "#ffc107";
-          }
-
-          return `
-        <div class="d-flex align-items-center gap-2">
-
-            <div class="progress flex-grow-1" style="height:10px; margin:0;">
-                <div class="progress-bar"
-                     style="width:${value}%; background:${color};">
-                </div>
-            </div>
-
-            <span style="
-                width:58px;
-                text-align:right;
-                font-weight:600;
-                font-size:12px;
-            ">
-                ${value.toFixed(2)}%
-            </span>
-
-        </div>
-    `;
-        },
+        width: 100,
+        hozAlign: "center",
+        formatter: progressCellFormatter,
       },
     ],
 
     rowClick: function (e, row) {
-      console.log(row.getData());
+      console.log("[summary]", row.getData());
     },
   });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("btnExport").addEventListener("click", () => {
-    if (table) {
-      table.download("xlsx", "monitoring-se.xlsx", {
-        sheetName: "Enumerator",
+/* ============================================================
+   Render Tab 2 — Detail per Kecamatan
+   Setiap baris = 1 (petugas × kecamatan)
+   ============================================================ */
+function renderTableDetail() {
+  const detailData = [];
+  let no = 1;
+
+  Dashboard.enumerators.forEach((e) => {
+    e.regions.forEach((r) => {
+      const totalDone =
+        (r.submitted || 0) +
+        (r.approved || 0) +
+        (r.rejected || 0) +
+        (r.revoked || 0);
+
+      const progress =
+        r.assignment > 0
+          ? Number(((totalDone / r.assignment) * 100).toFixed(2))
+          : 0;
+
+      detailData.push({
+        no: no++,
+        username: e.username,
+        regionCode: r.regionCode,
+        kecamatan: REGION_MAP[r.regionCode] || String(r.regionCode),
+        assignment: r.assignment || 0,
+        open: r.open || 0,
+        draft: r.draft || 0,
+        submitted: r.submitted || 0,
+        approved: r.approved || 0,
+        rejected: r.rejected || 0,
+        revoked: r.revoked || 0,
+        progress: progress,
       });
+    });
+  });
+
+  if (tableDetail) tableDetail.destroy();
+
+  tableDetail = new Tabulator("#gridTableDetail", {
+    data: detailData,
+    layout: "fitColumns",
+    responsiveLayout: false,
+    height: "650px",
+    movableColumns: true,
+    resizableColumns: true,
+    pagination: true,
+    paginationSize: 20,
+    placeholder: "Tidak ada data",
+
+    columns: [
+      { title: "No", field: "no", hozAlign: "center", width: 60 },
+      { title: "Username", field: "username", width: 220, headerFilter: "input" },
+      {
+        title: "Kode",
+        field: "regionCode",
+        width: 100,
+        hozAlign: "center",
+        headerFilter: "input",
+      },
+      { title: "Kecamatan", field: "kecamatan", width: 170, headerFilter: "input" },
+      { title: "Assignment", field: "assignment", hozAlign: "right" },
+      { title: "Open", field: "open", hozAlign: "right" },
+      { title: "Draft", field: "draft", hozAlign: "right" },
+      { title: "Submitted", field: "submitted", hozAlign: "right" },
+      { title: "Approved", field: "approved", hozAlign: "right" },
+      { title: "Rejected", field: "rejected", hozAlign: "right" },
+      { title: "Revoked", field: "revoked", hozAlign: "right" },
+      {
+        title: "Progress",
+        field: "progress",
+        width: 100,
+        hozAlign: "center",
+        formatter: progressCellFormatter,
+      },
+    ],
+
+    rowClick: function (e, row) {
+      console.log("[detail]", row.getData());
+    },
+  });
+}
+
+/* ============================================================
+   Hook: setiap kali renderTable() Tab 1 dipanggil (oleh app.js
+   renderAll()), kita juga render Tab 2 supaya konsisten.
+   ============================================================ */
+const _origRenderTable = renderTable;
+renderTable = function () {
+  _origRenderTable();
+  try {
+    renderTableDetail();
+  } catch (e) {
+    console.warn("[renderTableDetail] gagal:", e);
+  }
+};
+
+/* ============================================================
+   Tombol Export — ikuti tab yang sedang aktif
+   ============================================================ */
+document.addEventListener("DOMContentLoaded", () => {
+  const btnExport = document.getElementById("btnExport");
+  if (!btnExport) return;
+
+  btnExport.addEventListener("click", () => {
+    const detailPane = document.getElementById("tab-detail");
+    const isDetailActive = detailPane && detailPane.classList.contains("active");
+
+    if (isDetailActive) {
+      if (tableDetail) {
+        tableDetail.download("xlsx", "monitoring-se-detail-kecamatan.xlsx", {
+          sheetName: "Detail per Kecamatan",
+        });
+      }
+    } else {
+      if (table) {
+        table.download("xlsx", "monitoring-se-ringkasan.xlsx", {
+          sheetName: "Ringkasan per Petugas",
+        });
+      }
     }
+  });
+
+  /* Re-fit kolom saat ganti tab (Tabulator perlu trigger ulang
+     karena tabel di dalam tab-pane yang awalnya hidden) */
+  const tabBtns = document.querySelectorAll('#tableTabs button[data-bs-toggle="tab"]');
+  tabBtns.forEach((btn) => {
+    btn.addEventListener("shown.bs.tab", (e) => {
+      const target = e.target.getAttribute("data-bs-target");
+      if (target === "#tab-summary" && table) table.redraw(true);
+      if (target === "#tab-detail" && tableDetail) tableDetail.redraw(true);
+    });
   });
 });
