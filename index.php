@@ -734,6 +734,70 @@
             font-size: 20px;
         }
     }
+
+    /* ============================= */
+        /* TABS DARK STYLE               */
+        /* ============================= */
+        .nav-tabs.nav-tabs-dark {
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-tabs.nav-tabs-dark .nav-link {
+            color: var(--text-mute);
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 10px 10px 0 0;
+            padding: 8px 16px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: .2s;
+        }
+        .nav-tabs.nav-tabs-dark .nav-link:hover {
+            color: var(--text);
+            border-color: var(--border) var(--border) transparent;
+            background: rgba(59, 130, 246, .06);
+        }
+        .nav-tabs.nav-tabs-dark .nav-link.active {
+            color: var(--primary);
+            background: var(--bg-2);
+            border-color: var(--border) var(--border) var(--bg-2);
+            font-weight: 600;
+        }
+        .nav-tabs.nav-tabs-dark .nav-link i { font-size: 14px; }
+
+        /* Progress cell vertical (di dalam tabulator) */
+        .tbl-progress-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            padding: 2px 0;
+        }
+        .tbl-progress-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, .08);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .tbl-progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width .3s ease;
+        }
+        .tbl-progress-label {
+            text-align: center;
+            font-weight: 600;
+            font-size: 11px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Mobile: tabs jadi compact */
+        @media (max-width: 768px) {
+            .nav-tabs.nav-tabs-dark .nav-link {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            .tbl-progress-label { font-size: 10px; }
+        }
     </style>
 
 </head>
@@ -974,25 +1038,54 @@
             </div>
 
             <!-- ============================= -->
-            <!-- DATA GRID -->
+            <!-- DATA GRID (Tab 1 & Tab 2) -->
             <!-- ============================= -->
 
             <div class="chart-card mt-4">
 
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <div class="chart-title">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div class="chart-title m-0">
                         <i class="bi bi-table"></i>
                         Data Enumerator
                     </div>
                     <div>
-                        <button class="btn btn-success btn-sm" id="btnExport">
+                        <button class="btn btn-success btn-sm" id="btnExport" data-testid="btn-export-excel">
                             <i class="bi bi-file-earmark-excel"></i>
                             Export Excel
                         </button>
                     </div>
                 </div>
 
-                <div id="gridTable"></div>
+                <!-- Tabs -->
+                <ul class="nav nav-tabs nav-tabs-dark mb-3" id="tableTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-summary-btn" data-bs-toggle="tab"
+                            data-bs-target="#tab-summary" type="button" role="tab" data-testid="tab-summary">
+                            <i class="bi bi-person-lines-fill me-1"></i>
+                            Ringkasan per Petugas
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-detail-btn" data-bs-toggle="tab" data-bs-target="#tab-detail"
+                            type="button" role="tab" data-testid="tab-detail">
+                            <i class="bi bi-geo-alt me-1"></i>
+                            Detail per Kecamatan
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Panels -->
+                <div class="tab-content" id="tableTabsContent">
+
+                    <div class="tab-pane fade show active" id="tab-summary" role="tabpanel" data-testid="panel-summary">
+                        <div id="gridTable"></div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-detail" role="tabpanel" data-testid="panel-detail">
+                        <div id="gridTableDetail"></div>
+                    </div>
+
+                </div>
 
             </div>
 
