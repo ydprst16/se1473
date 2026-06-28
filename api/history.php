@@ -11,6 +11,10 @@
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate');
 
+// === Timezone WIB (Asia/Jakarta) — fix C ===
+// Supaya date('Y-m-d') konsisten dengan zona waktu user, bukan UTC Render.
+date_default_timezone_set('Asia/Jakarta');
+
 // -----------------------------------------------------------------------
 // Konfigurasi (dibaca dari Environment Variables Render)
 // -----------------------------------------------------------------------
@@ -300,16 +304,56 @@ try {
         }
 
         // -----------------------------------------------------------
-        // Auto snapshot (idempotent): copy latest.json -> history/YYYY-MM-DD.json
+        // Auto snapshot (idempotent + smart guard) — fix B
+        //   - Hanya copy latest.json -> history/YYYY-MM-DD.json
+        //     kalau latest.json benar-benar di-update HARI INI (WIB).
+        //   - Kalau latest.json adalah data lama (kemarin/sblmnya),
+        //     snapshot DILEWATI -> tidak ada duplikat di Supabase.
         // -----------------------------------------------------------
         case 'snapshot': {
             if ($method !== 'POST') throw new Exception('Method not allowed', 405);
             $today = date('Y-m-d');
+
+            // 1) Kalau snapshot hari ini sudah ada -> selesai (idempotent)
             $rCheck = sb_info("history/{$today}.json");
             if ($rCheck['status_code'] === 200) {
                 echo json_encode(['status' => 'ok', 'message' => 'sudah ada', 'date' => $today]);
                 break;
             }
+
+            // 2) Cek info latest.json
+            $rInfo = sb_info('latest.json');
+            if ($rInfo['status_code'] >= 400) {
+                echo json_encode(['status' => 'error', 'message' => 'latest.json belum ada']);
+                break;
+            }
+            $meta      = json_decode($rInfo['body'], true);
+            $updatedAt = $meta['updated_at'] ?? ($meta['created_at'] ?? null);
+            if (!$updatedAt) {
+                echo json_encode(['status' => 'skip', 'message' => 'updated_at tidak diketahui']);
+                break;
+            }
+
+            // 3) Guard: latest.json harus di-update HARI INI (WIB)
+            try {
+                $updatedYMD = (new DateTime($updatedAt))
+                    ->setTimezone(new DateTimeZone('Asia/Jakarta'))
+                    ->format('Y-m-d');
+            } catch (Exception $ex) {
+                echo json_encode(['status' => 'skip', 'message' => 'updated_at tidak bisa di-parse']);
+                break;
+            }
+
+            if ($updatedYMD !== $today) {
+                echo json_encode([
+                    'status'  => 'skip',
+                    'message' => "latest.json bukan data hari ini (mtime={$updatedYMD}, today={$today}) — snapshot dilewati",
+                    'date'    => $today,
+                ]);
+                break;
+            }
+
+            // 4) Aman — buat snapshot baru
             $rLatest = sb_download('latest.json');
             if ($rLatest['status_code'] >= 400) {
                 echo json_encode(['status' => 'error', 'message' => 'latest.json belum ada']);
