@@ -8,6 +8,13 @@
 document.addEventListener("DOMContentLoaded", init);
 
 /* ============================================================
+   Konstanta endpoint untuk data live (langsung dari Supabase via PHP)
+   Tidak lagi pakai "data/latest.json" karena Apache serve sebagai
+   file statis yang stale -- bypass langsung ke API.
+   ============================================================ */
+const LATEST_URL = "api/history.php?action=latest-raw";
+
+/* ============================================================
    Helper: format tanggal "DD MMM YYYY HH:mm" (Bahasa Indonesia)
    ============================================================ */
 function formatDateID(d) {
@@ -40,7 +47,7 @@ function formatDateID(d) {
 /* ============================================================
    View by Date
    ============================================================
-   viewedDate = null         -> live (data/latest.json)
+   viewedDate = null         -> live (Supabase latest.json via PHP)
               = "YYYY-MM-DD" -> snapshot tanggal tsb
    ============================================================ */
 let viewedDate = null;
@@ -55,27 +62,27 @@ async function loadByDate(date) {
     return;
   }
 
-  // Mode "live": coba data/latest.json dulu
+  // Mode "live": fetch langsung ke Supabase via PHP (BUKAN file statis)
   viewedDate = null;
   try {
-    const head = await fetch("data/latest.json", {
+    const head = await fetch(LATEST_URL, {
       method: "HEAD",
       cache: "no-store",
     });
     if (head.ok) {
-      await loadDashboard("data/latest.json");
+      await loadDashboard(LATEST_URL);
       return;
     }
   } catch (_) {}
 
-  // Fallback: latest.json tidak ada -> pakai snapshot terbaru di history
+  // Fallback: latest.json tidak ada di Supabase -> pakai snapshot terbaru
   console.warn(
-    "[loadByDate] data/latest.json tidak tersedia → fallback ke snapshot terbaru",
+    "[loadByDate] latest.json belum ada di Supabase → fallback ke snapshot terbaru",
   );
   const res = await fetch("api/history.php?action=latest", {
     cache: "no-store",
   });
-  if (!res.ok) throw new Error("Belum ada data sama sekali di folder data/");
+  if (!res.ok) throw new Error("Belum ada data sama sekali di Supabase");
   const payload = await res.json();
   if (payload.status !== "ok" || !Array.isArray(payload.data)) {
     throw new Error(payload.message || "Format respons tidak valid");
@@ -86,13 +93,13 @@ async function loadByDate(date) {
       "api/history.php?action=get&date=" + encodeURIComponent(payload.date),
     );
   } else {
-    await loadDashboard("data/latest.json");
+    await loadDashboard(LATEST_URL);
   }
 }
 
 /* ============================================================
    Update teks "Last Update"
-     - mode live    : mtime data/latest.json
+     - mode live    : mtime latest.json (dari Supabase)
      - mode tanggal : tanggal snapshot yg dilihat
    ============================================================ */
 async function updateLastUpdate() {
@@ -216,7 +223,7 @@ async function init() {
 
 /* ============================================================
    Isi dropdown <select id="viewDate"> dengan daftar snapshot
-   yang ada di data/history/.
+   yang ada di Supabase Storage (folder history/).
    ============================================================ */
 async function populateViewDateOptions() {
   const sel = document.getElementById("viewDate");
@@ -381,7 +388,8 @@ function bindEvents() {
     refresh.addEventListener("click", async () => {
       try {
         showLoading();
-        await reloadDashboard();
+        // Reload dengan mempertimbangkan mode saat ini (live atau tanggal tertentu)
+        await loadByDate(viewedDate);
         await renderAll();
         hideLoading();
         toast("success", "Data berhasil dimuat ulang");
@@ -497,7 +505,14 @@ function bindEvents() {
 
         // Reload dashboard supaya perbandingan ikut update
         showLoading();
-        await reloadDashboard();
+        // Setelah upload data hari ini -> kembali ke mode LIVE supaya tampil
+        // data baru, bukan tetap di tanggal yang user pilih sebelumnya.
+        if (isToday) {
+          viewedDate = null;
+          const viewDateEl = document.getElementById("viewDate");
+          if (viewDateEl) viewDateEl.value = "";
+        }
+        await loadByDate(viewedDate);
         await renderAll();
         hideLoading();
 
