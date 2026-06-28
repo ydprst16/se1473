@@ -560,7 +560,10 @@ function processEnumerator(user) {
 
 function processRegion(region) {
   return {
-    //regionCode: region.regionCode,
+    // Full kode subsls (16 digit) — dipakai Tab 2 "Detail per Kecamatan"
+    kdsubsls: String(region.regionCode),
+
+    // Truncated 7-digit untuk district mapping (REGION_MAP)
     regionCode: Number(String(region.regionCode).substring(0, 7)),
 
     assignment: safeNumber(region.total),
