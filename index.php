@@ -751,7 +751,7 @@
                             <i class="bi bi-pie-chart-fill text-primary"></i>
                             Status Dokumen
                         </div>
-                        //<span class="badge bg-primary">Live</span>
+                        <span class="badge bg-primary">Live</span>
                     </div>
                     <div class="chart-body">
                         <div id="statusChart" class="chart-box"></div>
