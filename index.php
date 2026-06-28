@@ -736,68 +736,96 @@
     }
 
     /* ============================= */
-        /* TABS DARK STYLE               */
-        /* ============================= */
-        .nav-tabs.nav-tabs-dark {
-            border-bottom: 1px solid var(--border);
-        }
-        .nav-tabs.nav-tabs-dark .nav-link {
-            color: var(--text-mute);
-            background: transparent;
-            border: 1px solid transparent;
-            border-radius: 10px 10px 0 0;
-            padding: 8px 16px;
-            font-weight: 500;
-            font-size: 14px;
-            transition: .2s;
-        }
-        .nav-tabs.nav-tabs-dark .nav-link:hover {
-            color: var(--text);
-            border-color: var(--border) var(--border) transparent;
-            background: rgba(59, 130, 246, .06);
-        }
-        .nav-tabs.nav-tabs-dark .nav-link.active {
-            color: var(--primary);
-            background: var(--bg-2);
-            border-color: var(--border) var(--border) var(--bg-2);
-            font-weight: 600;
-        }
-        .nav-tabs.nav-tabs-dark .nav-link i { font-size: 14px; }
+    /* TABS DARK STYLE               */
+    /* ============================= */
+    .nav-tabs.nav-tabs-dark {
+        border-bottom: 1px solid var(--border);
+    }
 
-        /* Progress cell vertical (di dalam tabulator) */
-        .tbl-progress-wrap {
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-            padding: 2px 0;
-        }
-        .tbl-progress-track {
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, .08);
-            border-radius: 3px;
-            overflow: hidden;
-        }
-        .tbl-progress-fill {
-            height: 100%;
-            border-radius: 3px;
-            transition: width .3s ease;
-        }
+    .nav-tabs.nav-tabs-dark .nav-link {
+        color: var(--text-mute);
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 10px 10px 0 0;
+        padding: 8px 16px;
+        font-weight: 500;
+        font-size: 14px;
+        transition: .2s;
+    }
+
+    .nav-tabs.nav-tabs-dark .nav-link:hover {
+        color: var(--text);
+        border-color: var(--border) var(--border) transparent;
+        background: rgba(59, 130, 246, .06);
+    }
+
+    .nav-tabs.nav-tabs-dark .nav-link.active {
+        color: var(--primary);
+        background: var(--bg-2);
+        border-color: var(--border) var(--border) var(--bg-2);
+        font-weight: 600;
+    }
+
+    .nav-tabs.nav-tabs-dark .nav-link i {
+        font-size: 14px;
+    }
+
+    /* Progress cell vertical (di dalam tabulator) */
+    .tbl-progress-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 6px 4px 4px;
+        width: 100%;
+    }
+
+    .tbl-progress-track {
+        width: 100%;
+        height: 7px;
+        background: rgba(255, 255, 255, .08);
+        border-radius: 999px;
+        overflow: hidden;
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, .35);
+    }
+
+    .tbl-progress-fill {
+        height: 100%;
+        border-radius: 999px;
+        transition: width .35s ease;
+    }
+
+    .tbl-progress-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-weight: 700;
+        font-size: 11.5px;
+        color: #f1f5f9;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: .2px;
+        line-height: 1;
+    }
+
+    .tbl-progress-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, .06);
+    }
+
+    @media (max-width: 768px) {
         .tbl-progress-label {
-            text-align: center;
-            font-weight: 600;
-            font-size: 11px;
-            font-variant-numeric: tabular-nums;
+            font-size: 10.5px;
+            gap: 4px;
         }
 
-        /* Mobile: tabs jadi compact */
-        @media (max-width: 768px) {
-            .nav-tabs.nav-tabs-dark .nav-link {
-                padding: 6px 10px;
-                font-size: 12px;
-            }
-            .tbl-progress-label { font-size: 10px; }
+        .tbl-progress-dot {
+            width: 6px;
+            height: 6px;
         }
+    }
     </style>
 
 </head>
