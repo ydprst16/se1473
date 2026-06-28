@@ -126,12 +126,62 @@ async function updateLastUpdate() {
 }
 
 /* ============================================================
+   Konversi Date -> "YYYY-MM-DD" pada timezone Asia/Jakarta (WIB)
+   ============================================================ */
+function toYMDinJakarta(d) {
+  if (!(d instanceof Date)) d = new Date(d);
+  if (isNaN(d.getTime())) return null;
+  // en-CA = format YYYY-MM-DD
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return fmt.format(d);
+}
+
+/* ============================================================
+   Cek apakah latest.json di-upload HARI INI (WIB).
+   Dipakai sebagai guard sebelum panggil autoSnapshotToday()
+   supaya snapshot tanggal hari ini TIDAK dibuat dari data lama.
+   ============================================================ */
+async function isLatestUpdatedToday() {
+  try {
+    const res = await fetch("api/history.php?action=latest-meta", {
+      cache: "no-store",
+    });
+    if (!res.ok) return false;
+    const meta = await res.json();
+    if (meta.status !== "ok" || !meta.mtime) return false;
+
+    const mtimeYMD = toYMDinJakarta(new Date(meta.mtime));
+    const today = todayYMD();
+    const sameDay = mtimeYMD === today;
+
+    if (!sameDay) {
+      console.info(
+        `[snapshot-guard] latest.json mtime=${mtimeYMD}, today=${today} -> SKIP auto snapshot`,
+      );
+    }
+    return sameDay;
+  } catch (e) {
+    console.warn("[snapshot-guard] gagal cek meta:", e);
+    return false;
+  }
+}
+
+/* ============================================================
    Render seluruh widget dashboard (dipanggil setelah load/refresh)
    ============================================================ */
 async function renderAll() {
-  // snapshot otomatis hanya kalau sedang mode "live" (lihat hari ini)
+  // Auto-snapshot HANYA kalau:
+  //   1) sedang mode "live" (lihat hari ini)
+  //   2) latest.json benar-benar di-upload HARI INI (WIB)
   if (!viewedDate && typeof autoSnapshotToday === "function") {
-    await autoSnapshotToday();
+    if (await isLatestUpdatedToday()) {
+      await autoSnapshotToday();
+    }
   }
 
   // Bandingkan terhadap tanggal yang sedang dilihat (default: hari ini)
@@ -521,11 +571,9 @@ function hideLoading() {
   document.body.style.cursor = "default";
 }
 
-/* tanggal hari ini format YYYY-MM-DD lokal */
+/* Tanggal hari ini format YYYY-MM-DD dalam WIB (Asia/Jakarta) */
 function todayYMD() {
-  const d = new Date();
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return toYMDinJakarta(new Date());
 }
 
 /* Tampilkan daftar snapshot yang tersedia di modal */
