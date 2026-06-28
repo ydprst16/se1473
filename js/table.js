@@ -3,30 +3,33 @@
 | table.js (Tabulator)
 |--------------------------------------------------------------------------
 | Tab 1 : Ringkasan per Petugas (#gridTable)
-| Tab 2 : Detail per Kecamatan  (#gridTableDetail)
+| Tab 2 : Detail per Kecamatan  (#gridTableDetail)  -- per kdsubsls (16 dig)
 |--------------------------------------------------------------------------
 */
 
 let table = null;        // Tab 1 - per petugas
-let tableDetail = null;  // Tab 2 - per kecamatan
+let tableDetail = null;  // Tab 2 - per kdsubsls
 
 /* ============================================================
-   Helper: formatter sel "Progress" — vertikal (bar atas, angka bawah)
+   Helper: formatter sel "Progress" — vertikal, eye-catching
+     - Bar tipis berwarna (signal)
+     - Angka putih + dot kecil berwarna (indikator)
    ============================================================ */
 function progressCellFormatter(cell) {
   const value = Number(cell.getValue()) || 0;
 
-  let color = "#dc3545"; // <40 merah
-  if (value >= 80) color = "#198754";       // hijau
-  else if (value >= 60) color = "#0d6efd";  // biru
-  else if (value >= 40) color = "#ffc107";  // kuning
+  let color = "#ef4444"; // <40 merah
+  if (value >= 80) color = "#22c55e";        // hijau (≥80)
+  else if (value >= 60) color = "#3b82f6";   // biru (60-80)
+  else if (value >= 40) color = "#f59e0b";   // jingga (40-60)
 
   return `
     <div class="tbl-progress-wrap">
       <div class="tbl-progress-track">
         <div class="tbl-progress-fill" style="width:${value}%; background:${color};"></div>
       </div>
-      <div class="tbl-progress-label" style="color:${color};">
+      <div class="tbl-progress-label">
+        <span class="tbl-progress-dot" style="background:${color};"></span>
         ${value.toFixed(2)}%
       </div>
     </div>
@@ -82,7 +85,7 @@ function renderTable() {
       {
         title: "Progress",
         field: "progress",
-        width: 100,
+        width: 130,
         hozAlign: "center",
         formatter: progressCellFormatter,
       },
@@ -96,7 +99,7 @@ function renderTable() {
 
 /* ============================================================
    Render Tab 2 — Detail per Kecamatan
-   Setiap baris = 1 (petugas × kecamatan)
+   Setiap baris = 1 (petugas × kdsubsls)
    ============================================================ */
 function renderTableDetail() {
   const detailData = [];
@@ -118,7 +121,7 @@ function renderTableDetail() {
       detailData.push({
         no: no++,
         username: e.username,
-        regionCode: r.regionCode,
+        kdsubsls: r.kdsubsls || String(r.regionCode),
         kecamatan: REGION_MAP[r.regionCode] || String(r.regionCode),
         assignment: r.assignment || 0,
         open: r.open || 0,
@@ -149,13 +152,18 @@ function renderTableDetail() {
       { title: "No", field: "no", hozAlign: "center", width: 60 },
       { title: "Username", field: "username", width: 220, headerFilter: "input" },
       {
-        title: "Kode",
-        field: "regionCode",
-        width: 100,
+        title: "kdsubsls",
+        field: "kdsubsls",
+        width: 170,
         hozAlign: "center",
         headerFilter: "input",
       },
-      { title: "Kecamatan", field: "kecamatan", width: 170, headerFilter: "input" },
+      {
+        title: "Kecamatan",
+        field: "kecamatan",
+        width: 170,
+        headerFilter: "input",
+      },
       { title: "Assignment", field: "assignment", hozAlign: "right" },
       { title: "Open", field: "open", hozAlign: "right" },
       { title: "Draft", field: "draft", hozAlign: "right" },
@@ -166,7 +174,7 @@ function renderTableDetail() {
       {
         title: "Progress",
         field: "progress",
-        width: 100,
+        width: 130,
         hozAlign: "center",
         formatter: progressCellFormatter,
       },
@@ -205,8 +213,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (isDetailActive) {
       if (tableDetail) {
-        tableDetail.download("xlsx", "monitoring-se-detail-kecamatan.xlsx", {
-          sheetName: "Detail per Kecamatan",
+        tableDetail.download("xlsx", "monitoring-se-detail-kdsubsls.xlsx", {
+          sheetName: "Detail per kdsubsls",
         });
       }
     } else {
