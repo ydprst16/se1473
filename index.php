@@ -847,13 +847,13 @@
         </div>
 
         <div class="header-right">
-<!--
+
             <span class="text-secondary">
                 <i class="bi bi-clock-history"></i>
                 Last Update
                 <strong id="lastUpdate">-</strong>
             </span>
--->
+
             <div class="d-flex align-items-center gap-2"
                 style="background: var(--card-solid); border:1px solid var(--border); border-radius:10px; padding:6px 10px;">
                 <i class="bi bi-calendar3"></i>
