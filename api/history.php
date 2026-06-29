@@ -1,31 +1,26 @@
 <?php
 /*
 |--------------------------------------------------------------------------
-| SE Monitoring Center
-| api/history.php  (Supabase Storage backend)
+| SE2026 Monitoring Center - api/history.php
 |--------------------------------------------------------------------------
-| PATCH:
-|  1. date_default_timezone_set('Asia/Jakarta')   -> agar $today = WIB
-|  2. Tambah action 'snapshot-meta'               -> return mtime asli
-|     file history/{date}.json dari Supabase Storage
+| Backend handler menggunakan Supabase Storage (REST API)
+| Mengganti penyimpanan filesystem lokal supaya data persisten di Render.
 |--------------------------------------------------------------------------
 */
 
-// ============================================================
-// 1) PAKSA timezone WIB. Render default-nya UTC, sehingga
-//    date('Y-m-d') pada 00:30 WIB masih "kemarin" (UTC).
-// ============================================================
+header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-store, no-cache, must-revalidate');
+
+// === Timezone WIB (Asia/Jakarta) — fix C ===
+// Supaya date('Y-m-d') konsisten dengan zona waktu user, bukan UTC Render.
 date_default_timezone_set('Asia/Jakarta');
 
-header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
-
-// ============================================================
-// Konfigurasi Supabase (dari ENV Render)
-// ============================================================
-$SUPABASE_URL = getenv('SUPABASE_URL') ?: '';
-$SUPABASE_KEY = getenv('SUPABASE_SERVICE_KEY') ?: '';
-$BUCKET       = getenv('SUPABASE_BUCKET') ?: 'data';
+// -----------------------------------------------------------------------
+// Konfigurasi (dibaca dari Environment Variables Render)
+// -----------------------------------------------------------------------
+$SUPABASE_URL   = getenv('SUPABASE_URL') ?: '';
+$SUPABASE_KEY   = getenv('SUPABASE_SERVICE_KEY') ?: '';
+$BUCKET         = getenv('SUPABASE_BUCKET') ?: 'se-monitoring';
 
 if (!$SUPABASE_URL || !$SUPABASE_KEY) {
     http_response_code(500);
@@ -36,9 +31,9 @@ if (!$SUPABASE_URL || !$SUPABASE_KEY) {
     exit;
 }
 
-// ============================================================
+// -----------------------------------------------------------------------
 // Helper: panggil Supabase Storage REST API
-// ============================================================
+// -----------------------------------------------------------------------
 function sb_request($method, $path, $extraHeaders = [], $body = null) {
     global $SUPABASE_URL, $SUPABASE_KEY;
 
@@ -106,9 +101,9 @@ function sb_list($prefix = '') {
     );
 }
 
-// ============================================================
+// -----------------------------------------------------------------------
 // Router
-// ============================================================
+// -----------------------------------------------------------------------
 $action = $_GET['action'] ?? '';
 $method = $_SERVER['REQUEST_METHOD'];
 
@@ -117,7 +112,6 @@ try {
 
         // -----------------------------------------------------------
         // Upload sebagai data terbaru (latest.json) + snapshot hari ini
-        // $today sekarang PASTI WIB karena timezone sudah di-set.
         // -----------------------------------------------------------
         case 'upload-latest': {
             if ($method !== 'POST') throw new Exception('Method not allowed', 405);
@@ -130,9 +124,8 @@ try {
             $r1 = sb_upload('latest.json', $content);
             if ($r1['status_code'] >= 400) throw new Exception('Upload latest gagal: ' . $r1['body']);
 
-            // PATCH: $today sekarang mengikuti WIB (Asia/Jakarta)
             $today = date('Y-m-d');
-            $r2    = sb_upload("history/{$today}.json", $content);
+            $r2 = sb_upload("history/{$today}.json", $content);
             if ($r2['status_code'] >= 400) throw new Exception('Upload snapshot gagal: ' . $r2['body']);
 
             echo json_encode(['status' => 'ok', 'date' => $today, 'message' => 'Latest + snapshot tersimpan']);
@@ -177,6 +170,7 @@ try {
             if ($r['status_code'] >= 400) {
                 throw new Exception('Gagal mengambil snapshot: ' . $r['body']);
             }
+            // Stream raw JSON content (processor.js mengharap Array)
             header('Content-Type: application/json; charset=utf-8');
             echo $r['body'];
             break;
@@ -206,6 +200,7 @@ try {
 
         // -----------------------------------------------------------
         // latest-raw: stream isi latest.json apa adanya (Array)
+        // Digunakan oleh rewrite "data/latest.json"
         // -----------------------------------------------------------
         case 'latest-raw': {
             if ($method === 'HEAD') {
@@ -224,7 +219,7 @@ try {
         }
 
         // -----------------------------------------------------------
-        // latest: data terbaru + info source
+        // latest: data terbaru + info source (latest atau fallback ke history terbaru)
         // -----------------------------------------------------------
         case 'latest': {
             $r = sb_download('latest.json');
@@ -233,6 +228,7 @@ try {
                 echo json_encode(['status' => 'ok', 'source' => 'latest', 'data' => $data]);
                 break;
             }
+            // Fallback ke snapshot terbaru
             $rList = sb_list('history/');
             if ($rList['status_code'] >= 400) throw new Exception('Gagal list snapshot');
             $files = json_decode($rList['body'], true) ?: [];
@@ -246,7 +242,7 @@ try {
             if (!$dates) throw new Exception('Belum ada data sama sekali');
             rsort($dates);
             $newest = $dates[0];
-            $rGet   = sb_download("history/{$newest}.json");
+            $rGet = sb_download("history/{$newest}.json");
             if ($rGet['status_code'] >= 400) throw new Exception('Gagal ambil snapshot terbaru');
             $data = json_decode($rGet['body'], true);
             echo json_encode([
@@ -276,63 +272,6 @@ try {
         }
 
         // -----------------------------------------------------------
-        // PATCH: NEW ACTION
-        // snapshot-meta: ambil mtime asli file history/{date}.json
-        // Dipakai dashboard saat user memilih snapshot tertentu
-        // supaya "Last Update" menampilkan jam upload asli,
-        // bukan 00:00 yang hardcoded.
-        // -----------------------------------------------------------
-        case 'snapshot-meta': {
-            $date = $_GET['date'] ?? '';
-            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-                throw new Exception('Tanggal tidak valid (format YYYY-MM-DD).');
-            }
-
-            // 1) Coba dapatkan dari endpoint object/info (cepat)
-            $r = sb_info("history/{$date}.json");
-            if ($r['status_code'] === 200) {
-                $meta  = json_decode($r['body'], true) ?: [];
-                $mtime = $meta['updated_at'] ?? ($meta['created_at'] ?? null);
-                if ($mtime) {
-                    echo json_encode([
-                        'status' => 'ok',
-                        'date'   => $date,
-                        'mtime'  => $mtime,
-                        'source' => 'info',
-                    ]);
-                    break;
-                }
-            }
-
-            // 2) Fallback: cari di list (kadang Supabase v1 belum expose /info)
-            $rList = sb_list('history/');
-            if ($rList['status_code'] >= 400) {
-                throw new Exception('Snapshot ' . $date . ' tidak ditemukan', 404);
-            }
-            $files = json_decode($rList['body'], true) ?: [];
-            foreach ($files as $f) {
-                if (($f['name'] ?? '') === "{$date}.json") {
-                    $mtime = $f['updated_at'] ?? ($f['created_at'] ?? null);
-                    echo json_encode([
-                        'status' => 'ok',
-                        'date'   => $date,
-                        'mtime'  => $mtime,
-                        'source' => 'list',
-                    ]);
-                    exit;
-                }
-            }
-
-            // 3) Tidak ada juga
-            http_response_code(404);
-            echo json_encode([
-                'status'  => 'error',
-                'message' => "Snapshot {$date} tidak ditemukan",
-            ]);
-            break;
-        }
-
-        // -----------------------------------------------------------
         // Snapshot sebelumnya (untuk perbandingan)
         // -----------------------------------------------------------
         case 'previous': {
@@ -357,7 +296,7 @@ try {
             }
             rsort($candidates);
             $prevDate = $candidates[0];
-            $rGet     = sb_download("history/{$prevDate}.json");
+            $rGet = sb_download("history/{$prevDate}.json");
             if ($rGet['status_code'] >= 400) throw new Exception('Gagal ambil snapshot');
             $data = json_decode($rGet['body'], true);
             echo json_encode(['status' => 'ok', 'date' => $prevDate, 'data' => $data]);
@@ -365,18 +304,24 @@ try {
         }
 
         // -----------------------------------------------------------
-        // Auto snapshot (idempotent + smart guard)
+        // Auto snapshot (idempotent + smart guard) — fix B
+        //   - Hanya copy latest.json -> history/YYYY-MM-DD.json
+        //     kalau latest.json benar-benar di-update HARI INI (WIB).
+        //   - Kalau latest.json adalah data lama (kemarin/sblmnya),
+        //     snapshot DILEWATI -> tidak ada duplikat di Supabase.
         // -----------------------------------------------------------
         case 'snapshot': {
             if ($method !== 'POST') throw new Exception('Method not allowed', 405);
-            $today = date('Y-m-d'); // WIB
+            $today = date('Y-m-d');
 
+            // 1) Kalau snapshot hari ini sudah ada -> selesai (idempotent)
             $rCheck = sb_info("history/{$today}.json");
             if ($rCheck['status_code'] === 200) {
                 echo json_encode(['status' => 'ok', 'message' => 'sudah ada', 'date' => $today]);
                 break;
             }
 
+            // 2) Cek info latest.json
             $rInfo = sb_info('latest.json');
             if ($rInfo['status_code'] >= 400) {
                 echo json_encode(['status' => 'error', 'message' => 'latest.json belum ada']);
@@ -389,6 +334,7 @@ try {
                 break;
             }
 
+            // 3) Guard: latest.json harus di-update HARI INI (WIB)
             try {
                 $updatedYMD = (new DateTime($updatedAt))
                     ->setTimezone(new DateTimeZone('Asia/Jakarta'))
@@ -407,6 +353,7 @@ try {
                 break;
             }
 
+            // 4) Aman — buat snapshot baru
             $rLatest = sb_download('latest.json');
             if ($rLatest['status_code'] >= 400) {
                 echo json_encode(['status' => 'error', 'message' => 'latest.json belum ada']);
