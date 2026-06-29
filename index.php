@@ -860,7 +860,7 @@
                 <label for="viewDate" class="m-0 small text-secondary">Lihat:</label>
                 <select id="viewDate" class="form-select form-select-sm"
                     style="width: 200px; background: var(--bg-2); color: var(--text); border:1px solid var(--border);">
-                    <option value="">— Data Terbaru (Live) —</option>
+                    <option value="">— Data Terbaru —</option>
                 </select>
                 <button class="btn btn-sm btn-outline-light" id="btnViewLatest" title="Kembali ke data terbaru">
                     <i class="bi bi-house-door"></i>
