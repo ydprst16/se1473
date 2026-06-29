@@ -226,34 +226,34 @@ try {
         // -----------------------------------------------------------
         // latest: data terbaru + info source
         // -----------------------------------------------------------
-        case 'latest': {
-            $r = sb_download('latest.json');
-            if ($r['status_code'] === 200) {
-                $data = json_decode($r['body'], true);
-                echo json_encode(['status' => 'ok', 'source' => 'latest', 'data' => $data]);
+        case 'latest-meta': {
+            // FIX: Pakai sb_list() bukan sb_info().
+            // /object/info/ sering balikin created_at, bukan updated_at.
+            // /object/list/ selalu balikin updated_at yang akurat.
+            $rList = sb_list('');
+            if ($rList['status_code'] >= 400) {
+                echo json_encode(['status' => 'error', 'message' => 'Gagal list root']);
                 break;
             }
-            $rList = sb_list('history/');
-            if ($rList['status_code'] >= 400) throw new Exception('Gagal list snapshot');
             $files = json_decode($rList['body'], true) ?: [];
-            $dates = [];
+            $mtime = null;
+            $created = null;
             foreach ($files as $f) {
-                $name = $f['name'] ?? '';
-                if (preg_match('/^(\d{4}-\d{2}-\d{2})\.json$/', $name, $m)) {
-                    $dates[] = $m[1];
+                if (($f['name'] ?? '') === 'latest.json') {
+                    $mtime   = $f['updated_at'] ?? null;
+                    $created = $f['created_at'] ?? null;
+                    break;
                 }
             }
-            if (!$dates) throw new Exception('Belum ada data sama sekali');
-            rsort($dates);
-            $newest = $dates[0];
-            $rGet   = sb_download("history/{$newest}.json");
-            if ($rGet['status_code'] >= 400) throw new Exception('Gagal ambil snapshot terbaru');
-            $data = json_decode($rGet['body'], true);
+            if (!$mtime && !$created) {
+                echo json_encode(['status' => 'error', 'message' => 'latest.json belum ada']);
+                break;
+            }
             echo json_encode([
-                'status' => 'ok',
-                'source' => 'history',
-                'date'   => $newest,
-                'data'   => $data
+                'status'     => 'ok',
+                'mtime'      => $mtime ?: $created,
+                'created_at' => $created,
+                'updated_at' => $mtime,
             ]);
             break;
         }
@@ -288,21 +288,36 @@ try {
                 throw new Exception('Tanggal tidak valid (format YYYY-MM-DD).');
             }
 
-            // 1) Coba dapatkan dari endpoint object/info (cepat)
-            $r = sb_info("history/{$date}.json");
-            if ($r['status_code'] === 200) {
-                $meta  = json_decode($r['body'], true) ?: [];
-                $mtime = $meta['updated_at'] ?? ($meta['created_at'] ?? null);
-                if ($mtime) {
+            // FIX: langsung pakai sb_list() sebagai sumber utama.
+            // /object/info/ sering return created_at (bukan updated_at).
+            $rList = sb_list('history/');
+            if ($rList['status_code'] >= 400) {
+                throw new Exception('Snapshot ' . $date . ' tidak ditemukan', 404);
+            }
+            $files = json_decode($rList['body'], true) ?: [];
+            foreach ($files as $f) {
+                if (($f['name'] ?? '') === "{$date}.json") {
+                    $mtime   = $f['updated_at'] ?? null;
+                    $created = $f['created_at'] ?? null;
                     echo json_encode([
-                        'status' => 'ok',
-                        'date'   => $date,
-                        'mtime'  => $mtime,
-                        'source' => 'info',
+                        'status'     => 'ok',
+                        'date'       => $date,
+                        'mtime'      => $mtime ?: $created,
+                        'created_at' => $created,
+                        'updated_at' => $mtime,
+                        'source'     => 'list',
                     ]);
-                    break;
+                    exit;
                 }
             }
+
+            http_response_code(404);
+            echo json_encode([
+                'status'  => 'error',
+                'message' => "Snapshot {$date} tidak ditemukan",
+            ]);
+            break;
+        }
 
             // 2) Fallback: cari di list (kadang Supabase v1 belum expose /info)
             $rList = sb_list('history/');
