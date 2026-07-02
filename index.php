@@ -987,7 +987,7 @@
                             <i class="bi bi-bar-chart-line-fill text-success"></i>
                             Top Progress Pencacah
                         </div>
-                        <span class="text-secondary small">Top 20</span>
+                        <span class="text-secondary small">Top 10</span>
                     </div>
                     <div class="chart-body">
                         <div id="rankingChart" class="chart-box"></div>
