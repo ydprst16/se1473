@@ -224,7 +224,7 @@ async function populateViewDateOptions() {
       "Jul","Agu","Sep","Okt","Nov","Des",
     ];
 
-    let html = `<option value="">— Data Terbaru (Live) —</option>`;
+    let html = `<option value="">— Data Terbaru —</option>`;
     items.forEach((it) => {
       const [y, m, d] = it.date.split("-");
       const label = `${d} ${bln[parseInt(m, 10) - 1]} ${y}`;
