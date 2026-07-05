@@ -1,47 +1,48 @@
-````markdown
 # 📊 SE2026 Monitoring Center
 
 Dashboard Monitoring Progress **SE2026 Kota Dumai** untuk memantau progres pekerjaan **PPL (Pencacah)** dan **PML (Pengawas)** berdasarkan file JSON hasil export aplikasi **FASIH**.
 
-Dashboard mendukung monitoring **real-time**, **snapshot harian**, **perbandingan progres**, **ranking petugas**, serta **ranking kecamatan**.
+Dashboard mendukung monitoring **real-time**, **snapshot harian**, **perbandingan progres**, **ranking petugas**, **ranking kecamatan**, serta analisis perkembangan pekerjaan dari hari ke hari.
 
 ---
 
 # ✨ Fitur
 
-- Monitoring Progress PPL
-- Monitoring Progress PML
-- KPI Dashboard
-- Ranking Petugas
-- Ranking Kecamatan
-- Status Distribution
-- Progress Distribution
-- Top & Bottom Performer
-- Daily Comparison
-- Snapshot History
-- Upload JSON langsung dari Dashboard
-- Penyimpanan data menggunakan Supabase Storage
+- 📈 Monitoring Progress PPL
+- 👨‍💼 Monitoring Progress PML
+- 📊 KPI Dashboard
+- 🏆 Ranking Progress Petugas
+- 🗺️ Ranking Progress Kecamatan
+- 🥧 Status Distribution
+- 📉 Progress Distribution
+- ⭐ Top Performer
+- 📉 Bottom Performer
+- 📅 Daily Comparison
+- 💾 Snapshot History
+- 📤 Upload JSON langsung melalui Dashboard
+- ☁️ Penyimpanan data menggunakan Supabase Storage
+- 🔄 Role-aware Dashboard (PPL & PML)
 
 ---
 
 # 🛠️ Teknologi
 
-| Teknologi | Keterangan |
-|-----------|------------|
+| Teknologi | Fungsi |
+|-----------|--------|
 | PHP | Backend API |
 | JavaScript | Business Logic |
-| Bootstrap 5 | UI Framework |
-| ApexCharts | Visualisasi Chart |
+| Bootstrap 5 | User Interface |
+| ApexCharts | Visualisasi Grafik |
 | Tabulator | Data Grid |
-| SweetAlert2 | Dialog |
-| Supabase Storage | Penyimpanan JSON |
+| SweetAlert2 | Dialog & Notification |
+| Supabase Storage | Penyimpanan File JSON |
 | JSON | Sumber Data |
 
 ---
 
 # 📁 Struktur Project
 
-```
+```text
 project/
 │
 ├── api/
@@ -66,50 +67,51 @@ project/
 
 # 🏗️ Arsitektur Sistem
 
-```
-                  JSON Export FASIH
-                         │
-                         ▼
-                  Upload Dashboard
-                   (history.php)
-                         │
-                         ▼
-                Supabase Storage
-                         │
-        ┌────────────────┴────────────────┐
-        ▼                                 ▼
+```text
+                JSON Export FASIH
+                       │
+                       ▼
+                Upload Dashboard
+                 (history.php)
+                       │
+                       ▼
+              Supabase Storage
+                       │
+      ┌────────────────┴────────────────┐
+      ▼                                 ▼
  latest.json                 latest_pengawas.json
-        │                                 │
- history/                     history_pengawas/
-        │                                 │
-        └────────────────┬────────────────┘
-                         ▼
-                  processor.js
-                         │
-        ├── Summary
-        ├── Progress
-        ├── Ranking
-        ├── Distribution
-        ├── Comparison
-        └── Dashboard Object
-                         │
-                         ▼
-                     app.js
-                         │
-      ┌──────────────┼───────────────┐
-      ▼              ▼               ▼
- Charts         Tables         KPI Dashboard
+      │                                 │
+ history/                    history_pengawas/
+      │                                 │
+      └────────────────┬────────────────┘
+                       ▼
+                 processor.js
+                       │
+      ├── Process Enumerator
+      ├── Calculate Summary
+      ├── Build District
+      ├── Build Ranking
+      ├── Build Distribution
+      ├── Build Comparison
+      └── Dashboard Object
+                       │
+                       ▼
+                    app.js
+                       │
+       ┌───────────────┼───────────────┐
+       ▼               ▼               ▼
+   KPI Dashboard    Charts          Tables
 ```
 
 ---
 
 # ☁️ Supabase Storage
 
-Project menggunakan **Supabase Storage** sebagai media penyimpanan seluruh file JSON.
+Dashboard menggunakan **Supabase Storage** sebagai media penyimpanan seluruh file JSON.
 
-## Struktur Storage
+## Struktur Bucket
 
-```
+```text
 Bucket : data
 
 latest.json
@@ -126,17 +128,24 @@ history_pengawas/
     ...
 ```
 
+## Keterangan
+
+| File | Fungsi |
+|------|--------|
+| latest.json | Data terbaru PPL |
+| latest_pengawas.json | Data terbaru PML |
+| history/*.json | Snapshot harian PPL |
+| history_pengawas/*.json | Snapshot harian PML |
+
 ---
 
-## Environment
+# ⚙️ Environment
 
-Buat file `.env` atau konfigurasi server.
+Konfigurasikan environment berikut.
 
 ```env
-SUPABASE_URL=https://xxxxx.supabase.co
-
-SUPABASE_SERVICE_KEY=xxxxxxxxxxxxxxxxxxxxx
-
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=your-service-role-key
 SUPABASE_BUCKET=data
 ```
 
@@ -146,13 +155,13 @@ SUPABASE_BUCKET=data
 
 Upload dilakukan melalui
 
-```
+```text
 api/history.php
 ```
 
-Flow upload:
+Flow upload
 
-```
+```text
 Upload JSON
       │
       ▼
@@ -161,30 +170,59 @@ history.php
       ▼
 Deteksi Role
       │
-      ├──────────────┐
-      ▼              ▼
- PPL             PML
-      │              │
-      ▼              ▼
-latest.json    latest_pengawas.json
-      │              │
-      ▼              ▼
-history/    history_pengawas/
+      ├─────────────┐
+      ▼             ▼
+    PPL            PML
+      │             │
+      ▼             ▼
+ latest.json   latest_pengawas.json
+      │             │
+      ▼             ▼
+ history/    history_pengawas/
 ```
 
-Setiap upload terbaru akan:
+Setiap upload akan:
 
-- Menimpa latest.json
-- Menyimpan snapshot berdasarkan tanggal
-- Otomatis tersedia untuk Dashboard
+- Mengidentifikasi role otomatis
+- Menyimpan file terbaru
+- Membuat snapshot harian
+- Menyediakan data untuk Dashboard
+
+---
+
+# ⚙️ Alur Pengolahan Data
+
+```text
+Raw JSON
+    │
+    ▼
+processor.js
+    │
+    ├── Process Enumerator
+    ├── Process Region
+    ├── Calculate Summary
+    ├── Calculate Progress
+    ├── Ranking
+    ├── Distribution
+    ├── Search Index
+    └── Dashboard Object
+              │
+              ▼
+app.js
+              │
+      ├── KPI
+      ├── Charts
+      ├── Tables
+      └── Comparison
+```
 
 ---
 
 # 📈 Perhitungan Progress
 
-Semua perhitungan dilakukan pada:
+Seluruh perhitungan utama dilakukan pada
 
-```
+```text
 processor.js
 ```
 
@@ -196,7 +234,7 @@ Dashboard menghitung seluruh status berikut.
 
 | Status | Keterangan |
 |---------|------------|
-| Assignment | Total assignment |
+| Assignment | Total Assignment |
 | Open | Belum dikerjakan |
 | Draft | Draft |
 | Submitted | Sudah dikirim |
@@ -205,24 +243,25 @@ Dashboard menghitung seluruh status berikut.
 | Rejected | Ditolak |
 | Revoked | Dicabut |
 
-Status Edited merupakan gabungan:
+Status **Edited** merupakan gabungan dari:
 
 - EDITED BY Pengawas
 - EDITED BY Admin Kabupaten
 
 ---
 
-# 👨‍💼 Progress PPL
+# 👨‍💼 Progress PPL (Pencacah)
 
 Menggunakan field
 
-```
+```text
 progressTotal
 ```
 
-Rumus
+### Rumus
 
-```
+```text
+Progress =
 (
 Submitted
 + Approved
@@ -230,10 +269,10 @@ Submitted
 + Rejected
 + Revoked
 )
-/ Assignment ×100%
+/ Assignment × 100%
 ```
 
-Status dianggap selesai apabila:
+Status dianggap selesai apabila dokumen telah:
 
 - Submitted
 - Approved
@@ -243,27 +282,28 @@ Status dianggap selesai apabila:
 
 ---
 
-# 👨‍💼 Progress PML
+# 👨‍💼 Progress PML (Pengawas)
 
 Menggunakan field
 
-```
+```text
 progressReview
 ```
 
-Rumus
+### Rumus
 
-```
+```text
+Progress =
 (
 Approved
 + Edited
 + Rejected
 + Revoked
 )
-/ Assignment ×100%
+/ Assignment × 100%
 ```
 
-Status Submitted belum dihitung karena masih menjadi backlog review.
+Status **Submitted** belum dihitung karena masih menjadi backlog review.
 
 ---
 
@@ -271,11 +311,11 @@ Status Submitted belum dihitung karena masih menjadi backlog review.
 
 Dilakukan pada
 
-```
+```text
 processor.js
 ```
 
-Summary menghasilkan:
+Summary Dashboard menghasilkan:
 
 - Assignment
 - Open
@@ -286,113 +326,81 @@ Summary menghasilkan:
 - Rejected
 - Revoked
 
----
+Kemudian dihitung:
 
 ## Reviewed
 
-```
-Reviewed
-
-=
-
+```text
+Reviewed =
 Approved
 + Edited
 + Rejected
 + Revoked
 ```
 
----
-
 ## Completed
 
-```
-Completed
-
-=
-
+```text
+Completed =
 Submitted
 + Reviewed
 ```
 
----
-
 ## Progress Submit
 
-```
+```text
 Submitted
-
-/
-
-Assignment
+÷ Assignment ×100%
 ```
-
----
 
 ## Progress Approve
 
-```
+```text
 Approved
-
-/
-
-Assignment
+÷ Assignment ×100%
 ```
-
----
 
 ## Progress Review
 
-```
+```text
 Reviewed
-
-/
-
-Assignment
+÷ Assignment ×100%
 ```
-
----
 
 ## Progress Total
 
-```
+```text
 Completed
-
-/
-
-Assignment
+÷ Assignment ×100%
 ```
 
----
+Summary tersebut digunakan pada:
 
-Nilai tersebut digunakan pada
-
-- KPI
-- Summary
+- KPI Dashboard
 - Progress Bar
-- Donut Chart
+- Status Donut
+- Summary Cards
 
 ---
 
-# 🏆 Ranking Petugas
+# 🏆 Ranking Progress Petugas
 
-File
+Perhitungan dilakukan pada
 
-```
+```text
 processor.js
 charts.js
 ```
-
-Semua petugas diurutkan berdasarkan progress.
 
 ## PPL
 
 Menggunakan
 
-```
+```text
 progressTotal
 ```
 
-Menghasilkan
+Menghasilkan:
 
 - Top 10 Progress
 - Bottom 10 Progress
@@ -403,11 +411,11 @@ Menghasilkan
 
 Menggunakan
 
-```
+```text
 progressReview
 ```
 
-Menghasilkan
+Menghasilkan:
 
 - Top 10 Progress
 - Bottom 10 Progress
@@ -418,45 +426,51 @@ Menghasilkan
 
 Perhitungan dilakukan pada
 
-```
+```text
 charts.js
 ```
 
-Progress seluruh petugas pada kecamatan dijumlahkan terlebih dahulu.
+Progress seluruh petugas dalam satu kecamatan dijumlahkan terlebih dahulu.
 
-## PPL
+Kemudian dihitung:
 
-```
+### PPL
+
+```text
 progressTotal
 ```
 
-## PML
+### PML
 
-```
+```text
 progressReview
 ```
 
-Kemudian dilakukan sorting secara descending.
+Lalu dilakukan sorting dari progress tertinggi ke terendah.
+
+Visualisasi menggunakan Horizontal Bar Chart.
 
 ---
 
 # 📊 Distribution
 
-Dashboard menghitung distribusi progress petugas ke dalam bucket berikut.
+Dashboard mengelompokkan progress petugas menjadi beberapa kategori.
 
+```text
+0 – 20%
+
+20 – 40%
+
+40 – 60%
+
+60 – 80%
+
+80 – 100%
 ```
-0 - 20%
 
-20 - 40%
+Digunakan untuk:
 
-40 - 60%
-
-60 - 80%
-
-80 - 100%
-```
-
-Visualisasi menggunakan Bar Chart.
+- Progress Distribution Chart
 
 ---
 
@@ -464,13 +478,13 @@ Visualisasi menggunakan Bar Chart.
 
 Perhitungan dilakukan pada
 
-```
+```text
 comparison.js
 ```
 
 Dashboard membandingkan
 
-```
+```text
 Hari Ini
 
 vs
@@ -478,9 +492,9 @@ vs
 Hari Sebelumnya
 ```
 
-Snapshot sebelumnya diambil dari
+Snapshot diambil dari
 
-```
+```text
 history/
 
 history_pengawas/
@@ -490,7 +504,7 @@ history_pengawas/
 
 ## Rumus Progress Harian PPL
 
-```
+```text
 (
 Submitted
 + Approved
@@ -505,7 +519,7 @@ Submitted
 
 ## Rumus Progress Harian PML
 
-```
+```text
 (
 Approved
 + Edited
@@ -519,24 +533,22 @@ Approved
 
 ## Delta Progress
 
-```
+```text
 Progress Hari Ini
-
 -
-
 Progress Hari Sebelumnya
 ```
 
-Dashboard menghasilkan
+Dashboard menghasilkan:
 
-- Top Progress
-- Bottom Progress
-- Top Improvement
-- Lowest Improvement
+- 🚀 Top Improvement
+- 📉 Lowest Improvement
+- 🏆 Top Progress
+- ⚠️ Bottom Progress
 
 ---
 
-# 📋 Dashboard
+# 📊 Dashboard Components
 
 ## KPI
 
@@ -575,7 +587,7 @@ Dashboard menghasilkan
 
 ### Ringkasan Petugas
 
-Menampilkan
+Menampilkan:
 
 - Username
 - Kecamatan
@@ -592,7 +604,7 @@ Menampilkan
 
 ### Detail Kecamatan
 
-Menampilkan
+Menampilkan:
 
 - Username
 - Kecamatan
@@ -613,7 +625,7 @@ Menampilkan
 | Komponen | PPL | PML |
 |-----------|-----|------|
 | Progress | progressTotal | progressReview |
-| Submitted dihitung | ✅ | ❌ |
+| Submitted dihitung | ✅ Ya | ❌ Tidak |
 | Fokus | Penyelesaian Pencacahan | Penyelesaian Review |
 | Ranking | progressTotal | progressReview |
 | Daily Comparison | progressTotal | progressReview |
@@ -623,30 +635,41 @@ Menampilkan
 
 # 🚀 Cara Menjalankan
 
-1. Clone repository
+## 1. Clone Repository
 
 ```bash
 git clone https://github.com/username/se2026-monitoring-center.git
 ```
 
-2. Masuk ke project
+## 2. Masuk ke Folder
 
 ```bash
 cd se2026-monitoring-center
 ```
 
-3. Konfigurasi environment Supabase.
+## 3. Konfigurasi Environment
 
-4. Jalankan menggunakan Apache / XAMPP / Railway.
+Tambahkan konfigurasi Supabase.
 
-5. Upload file JSON dari halaman Dashboard.
+## 4. Jalankan Server
+
+Contoh:
+
+- Apache
+- XAMPP
+- Laragon
+- Railway
+
+## 5. Upload JSON
+
+Buka Dashboard kemudian upload file JSON hasil export FASIH.
 
 ---
 
 # 📌 Catatan
 
 - Dashboard mendukung dua role (**PPL** dan **PML**).
-- Seluruh KPI, ranking, tabel, grafik, dan comparison akan berubah otomatis sesuai role.
+- Seluruh KPI, grafik, ranking, tabel, dan comparison akan berubah otomatis sesuai role yang dipilih.
 - Snapshot harian digunakan sebagai dasar perhitungan comparison.
-- Penyimpanan data sepenuhnya menggunakan Supabase Storage sehingga tidak memerlukan database relasional.
-````
+- Data disimpan di **Supabase Storage**, sehingga tidak memerlukan database relasional.
+- Dashboard menggunakan file JSON sebagai sumber data utama.
