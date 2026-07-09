@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>SE2026 Monitoring Center</title>
+    <link rel="icon" type="image/png" href="assets/img/favicon.png">
 
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -25,12 +26,6 @@
 
     <!-- SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- Flatpickr (datepicker) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/dark.css">
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/id.js"></script>
 
     <style>
         :root {
@@ -152,6 +147,20 @@
             transform: translateY(-4px);
             border-color: var(--primary);
         }
+
+        🎨 Patch CSS — Tambahkan di index.php CARI di block <style>(sekitar baris 145 — hover style KPI existing): .kpi-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+        }
+
+        TEPAT SETELAH block itu (setelah
+        }
+
+        penutup),
+        sisipkan CSS baru berikut:
+        /* ============================================================
+           Interactive Cards — hover + touch feedback untuk SEMUA card
+           ============================================================ */
 
         /* Chart cards */
         .chart-card {
@@ -603,8 +612,7 @@
                 padding: 4px 8px !important;
             }
 
-            .header-right>.d-flex select#viewDate,
-            .header-right>.d-flex input#viewDate {
+            .header-right>.d-flex select#viewDate {
                 width: auto !important;
                 flex: 1;
                 font-size: 12px;
@@ -966,86 +974,6 @@
         .kpi-card.backlog-green {
             border-color: rgba(34, 197, 94, .35);
         }
-
-        /* ===== Flatpickr customization ===== */
-        .flatpickr-calendar {
-            font-family: 'Inter', sans-serif;
-            border: 1px solid var(--border);
-            box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
-        }
-
-        .flatpickr-day.has-data {
-            font-weight: 600;
-            color: #22c55e !important;
-            position: relative;
-        }
-
-        .flatpickr-day.has-data::after {
-            content: "";
-            position: absolute;
-            bottom: 4px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 5px;
-            height: 5px;
-            border-radius: 50%;
-            background: #22c55e;
-            box-shadow: 0 0 6px rgba(34, 197, 94, .8);
-        }
-
-        .flatpickr-day.selected.has-data,
-        .flatpickr-day.selected.has-data::after {
-            color: #fff !important;
-        }
-
-        .flatpickr-day.selected.has-data::after {
-            background: #fff;
-            box-shadow: 0 0 6px rgba(255, 255, 255, .6);
-        }
-
-        .flatpickr-calendar .fp-legend {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            font-size: 11px;
-            color: var(--text);
-            opacity: .75;
-            padding: 6px 8px 8px;
-            border-top: 1px solid rgba(255, 255, 255, .06);
-        }
-
-        .flatpickr-calendar .fp-legend .fp-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: #22c55e;
-            box-shadow: 0 0 6px rgba(34, 197, 94, .8);
-        }
-
-        [data-bs-theme="light"] .flatpickr-calendar {
-            background: #ffffff;
-            color: #1f2937;
-            border-color: #e5e7eb;
-        }
-
-        [data-bs-theme="light"] .flatpickr-months .flatpickr-month,
-        [data-bs-theme="light"] .flatpickr-weekdays,
-        [data-bs-theme="light"] .flatpickr-weekday {
-            background: #ffffff;
-            color: #1f2937;
-            fill: #1f2937;
-        }
-
-        [data-bs-theme="light"] .flatpickr-day {
-            color: #1f2937;
-        }
-
-        [data-bs-theme="light"] .flatpickr-day.flatpickr-disabled,
-        [data-bs-theme="light"] .flatpickr-day.prevMonthDay,
-        [data-bs-theme="light"] .flatpickr-day.nextMonthDay {
-            color: #9ca3af;
-        }
     </style>
 
 </head>
@@ -1078,9 +1006,10 @@
                 style="background: var(--card-solid); border:1px solid var(--border); border-radius:10px; padding:6px 10px;">
                 <i class="bi bi-calendar3"></i>
                 <label for="viewDate" class="m-0 small text-secondary">Lihat:</label>
-                <input id="viewDate" type="text" class="form-control form-control-sm" autocomplete="off"
-                    placeholder="— Snapshot Data —" readonly
-                    style="width: 200px; background: var(--bg-2); color: var(--text); border:1px solid var(--border); cursor:pointer;" />
+                <select id="viewDate" class="form-select form-select-sm"
+                    style="width: 170px; background: var(--bg-2); color: var(--text); border:1px solid var(--border); text-align:center; text-align-last:center;">
+                    <option value="">— Data Terbaru —</option>
+                </select>
                 <button class="btn btn-sm btn-outline-light" id="btnViewLatest" title="Kembali ke data terbaru">
                     <i class="bi bi-house-door"></i>
                 </button>
@@ -1149,4 +1078,299 @@
                 </div>
             <?php } ?>
 
-        </
+        </div>
+
+        <!-- ============================= -->
+        <!-- PROGRESS KESELURUHAN -->
+        <!-- ============================= -->
+
+        <div class="chart-card">
+
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="chart-title">Progress Keseluruhan</div>
+                <strong id="progressText">0%</strong>
+            </div>
+
+            <div class="progress">
+                <div id="overallProgress" class="progress-bar bg-success progress-bar-striped progress-bar-animated"
+                    style="width:0%">
+                    0%
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ============================= -->
+        <!-- COMPARISON: HARI INI vs KEMARIN -->
+        <!-- ============================= -->
+
+        <div class="cmp-section">
+
+            <div class="d-flex justify-content-between align-items-end mb-2">
+                <div>
+                    <div class="chart-title" id="comparisonMainTitle">Perbandingan Harian PPL</div>
+                    <div id="comparisonSubtitle" class="cmp-subtitle">Memuat...</div>
+                </div>
+            </div>
+
+            <div class="row g-3" id="comparisonCards">
+                <!-- diisi javascript -->
+            </div>
+
+        </div>
+
+        <!-- ============================= -->
+        <!-- ROW 1 : STATUS & RANKING -->
+        <!-- ============================= -->
+
+        <div class="row mt-4 g-4">
+
+            <div class="col-xl-4 d-flex">
+                <div class="chart-card equal-height w-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="chart-title">
+                            <i class="bi bi-pie-chart-fill text-primary"></i>
+                            Status Dokumen
+                        </div>
+                        <!-- <span class="badge bg-primary">Live</span> -->
+                    </div>
+                    <div class="chart-body">
+                        <div id="statusChart" class="chart-box"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-8 d-flex">
+                <div class="chart-card equal-height w-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="chart-title">
+                            <i class="bi bi-bar-chart-line-fill text-success"></i>
+                            <span id="rankingTitle">Top Progress Pencacah</span>
+                        </div>
+                        <span class="text-secondary small">Top 10</span>
+                    </div>
+                    <div class="chart-body">
+                        <div id="rankingChart" class="chart-box"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ============================= -->
+        <!-- ROW 2 -->
+        <!-- ============================= -->
+
+        <div class="row mt-4 g-4">
+
+            <div class="col-xl-6 d-flex">
+                <div class="chart-card equal-height w-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="chart-title">
+                            <i class="bi bi-geo-alt-fill text-danger"></i>
+                            Ranking Kecamatan
+                        </div>
+                        <span class="badge bg-danger">Progress</span>
+                    </div>
+                    <div class="chart-body">
+                        <div id="districtChart" class="chart-box"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-6 d-flex">
+                <div class="chart-card equal-height w-100">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div class="chart-title">
+                            <i class="bi bi-graph-up-arrow text-warning"></i>
+                            Distribusi Progress
+                        </div>
+                        <span class="badge bg-warning text-dark">Histogram</span>
+                    </div>
+                    <div class="chart-body">
+                        <div id="distributionChart" class="chart-box"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================= -->
+            <!-- TOP & BOTTOM -->
+            <!-- ============================= -->
+
+            <div class="row mt-4 g-4">
+
+                <div class="col-lg-6">
+                    <div class="chart-card">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="chart-title">🏆 Top Performer</div>
+                            <span class="badge bg-success">Top 10</span>
+                        </div>
+                        <div id="topPerformer" class="performer-list">
+                            <!-- diisi javascript -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="chart-card">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="chart-title">⚠️ Perlu Pendampingan</div>
+                            <span class="badge bg-danger">Bottom 10</span>
+                        </div>
+                        <div id="bottomPerformer" class="performer-list">
+                            <!-- diisi javascript -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ============================= -->
+            <!-- DATA GRID (Tab 1 & Tab 2) -->
+            <!-- ============================= -->
+
+            <div class="chart-card mt-4">
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <div class="chart-title m-0">
+                        <i class="bi bi-table"></i>
+                        <span id="tableTitle">Data Enumerator</span>
+                    </div>
+                    <div>
+                        <button class="btn btn-success btn-sm" id="btnExport" data-testid="btn-export-excel">
+                            <i class="bi bi-file-earmark-excel"></i>
+                            Export Excel
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <ul class="nav nav-tabs nav-tabs-dark mb-3" id="tableTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-summary-btn" data-bs-toggle="tab"
+                            data-bs-target="#tab-summary" type="button" role="tab" data-testid="tab-summary">
+                            <i class="bi bi-person-lines-fill me-1"></i>
+                            Ringkasan per Petugas
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-detail-btn" data-bs-toggle="tab" data-bs-target="#tab-detail"
+                            type="button" role="tab" data-testid="tab-detail">
+                            <i class="bi bi-geo-alt me-1"></i>
+                            Detail per Kecamatan
+                        </button>
+                    </li>
+                </ul>
+
+                <!-- Tab Panels -->
+                <div class="tab-content" id="tableTabsContent">
+
+                    <div class="tab-pane fade show active" id="tab-summary" role="tabpanel" data-testid="panel-summary">
+                        <div id="gridTable"></div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tab-detail" role="tabpanel" data-testid="panel-detail">
+                        <div id="gridTableDetail"></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ============================= -->
+            <!-- UPLOAD MODAL -->
+            <!-- ============================= -->
+
+            <div class="modal fade" id="uploadModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+
+                        <div class="modal-header">
+                            <h5 class="modal-title">Upload JSON</h5>
+                            <button class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+
+                        <div class="modal-body">
+
+                            <!-- File JSON -->
+                            <label class="form-label small text-secondary mb-1">File JSON</label>
+                            <input type="file" id="jsonFile" accept=".json" class="form-control">
+
+                            <!-- Tanggal Snapshot -->
+                            <div class="mt-3">
+                                <label for="jsonDate" class="form-label small text-secondary mb-1">
+                                    Tanggal Snapshot
+                                    <span class="text-warning">(otomatis terisi dari nama file)</span>
+                                </label>
+                                <input type="date" id="jsonDate" class="form-control">
+                            </div>
+
+                            <!-- Info -->
+                            <div class="mt-3">
+                                <small class="text-secondary d-block">
+                                    <i class="bi bi-info-circle"></i>
+                                    Pilih <code>latest.json</code> hasil export FASIH.
+                                    Sistem akan auto-deteksi tanggal dari nama file
+                                    (format <code>..._YYYY-MM-DD.json</code>).
+                                </small>
+                                <small class="text-secondary d-block mt-2">
+                                    <i class="bi bi-check-circle text-success"></i>
+                                    Tanggal = hari ini &rarr; ganti data live + simpan snapshot
+                                </small>
+                                <small class="text-secondary d-block">
+                                    <i class="bi bi-archive text-info"></i>
+                                    Tanggal = lampau &rarr; hanya simpan sebagai snapshot
+                                </small>
+                            </div>
+
+                            <!-- Daftar snapshot yang sudah ada -->
+                            <div class="mt-3">
+                                <small class="text-secondary">
+                                    Snapshot tersimpan:
+                                    <span id="snapshotList" class="fw-semibold">memuat...</span>
+                                </small>
+                            </div>
+
+                        </div>
+
+                        <div class="modal-footer">
+                            <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                            <button id="btnUpload" class="btn btn-primary">Upload</button>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <!-- ============================= -->
+            <!-- FOOTER -->
+            <!-- ============================= -->
+
+            <footer class="text-center mt-5 mb-4 text-secondary">
+                <small>
+                    SE2026 Monitoring Center
+                    <br>
+                    Powered by Bootstrap 5 • ApexCharts • Grid.js
+                </small>
+            </footer>
+
+        </div>
+
+        <!-- Bootstrap -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+        <!-- SheetJS -->
+        <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+        <script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
+
+        <!-- JS -->
+        <script src="js/helper.js"></script>
+        <script src="js/processor.js"></script>
+        <script src="js/charts.js"></script>
+        <script src="js/table.js"></script>
+        <script src="js/comparison.js"></script>
+        <script src="js/app.js"></script>
+
+</body>
+
+</html>
