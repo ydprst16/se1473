@@ -12,8 +12,6 @@ document.addEventListener("DOMContentLoaded", init);
 /* ========= Global state ========= */
 let currentRole = "pencacah";
 let viewedDate = null;
-let currentRole = "pencacah";
-let viewedDate = null;
 
 function apiURL(action, extra = {}) {
   const params = new URLSearchParams({ action, role: currentRole, ...extra });
@@ -187,86 +185,23 @@ async function init() {
   }
 }
 
-/* ========= Datepicker snapshot ========= */
+/* ========= Dropdown snapshot ========= */
 async function populateViewDateOptions() {
-  const el = document.getElementById("viewDate");
-  if (!el) return;
-
-  let dates = [];
+  const sel = document.getElementById("viewDate");
+  if (!sel) return;
   try {
     const res = await fetch(apiURL("list"), { cache: "no-store" });
     const j = await res.json();
-    if (j && j.status === "ok" && Array.isArray(j.items)) {
-      dates = j.items.map((it) => it.date);
-    }
-  } catch (e) {
-    console.warn("[viewDate]:", e);
-  }
-
-  viewDateEnabled = new Set(dates);
-
-  if (typeof flatpickr === "undefined") {
-    console.warn("[viewDate] flatpickr belum tersedia");
-    return;
-  }
-
-  if (viewDateFp) {
-    viewDateFp.set("enable", dates.length ? dates : [() => false]);
-    if (viewedDate) viewDateFp.setDate(viewedDate, false);
-    else viewDateFp.clear(false);
-    viewDateFp.redraw();
-    return;
-  }
-
-  viewDateFp = flatpickr(el, {
-    dateFormat: "Y-m-d",
-    altInput: true,
-    altFormat: "d M Y",
-    locale: (flatpickr.l10ns && flatpickr.l10ns.id) || "default",
-    disableMobile: true,
-    allowInput: false,
-    enable: dates.length ? dates : [() => false],
-    defaultDate: viewedDate || null,
-    onDayCreate: function (_dObj, _dStr, _fp, dayElem) {
-      if (!dayElem || !dayElem.dateObj) return;
-      const d = dayElem.dateObj;
-      const ymd =
-        d.getFullYear() + "-" +
-        String(d.getMonth() + 1).padStart(2, "0") + "-" +
-        String(d.getDate()).padStart(2, "0");
-      if (viewDateEnabled.has(ymd)) {
-        dayElem.classList.add("has-data");
-      }
-    },
-    onReady: function (_sd, _ds, fp) {
-      if (!fp.calendarContainer.querySelector(".fp-legend")) {
-        const legend = document.createElement("div");
-        legend.className = "fp-legend";
-        legend.innerHTML =
-          '<span class="fp-dot"></span><span>Tanggal dengan data snapshot</span>';
-        fp.calendarContainer.appendChild(legend);
-      }
-    },
-    onChange: async function (selectedDates, dateStr) {
-      if (!dateStr) return;
-      try {
-        showLoading();
-        await loadByDate(dateStr);
-        await renderAll();
-        hideLoading();
-        toast("info", `Menampilkan ${currentRole} ${dateStr}`);
-      } catch (err) {
-        hideLoading();
-        Swal.fire({
-          icon: "error",
-          title: "Snapshot tidak ditemukan",
-          text: `Tidak ada data ${currentRole} untuk ${dateStr}.`,
-        });
-        if (viewDateFp) viewDateFp.clear();
-        viewedDate = null;
-      }
-    },
-  });
+    const items = j && j.status === "ok" && Array.isArray(j.items) ? j.items : [];
+    const bln = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agu","Sep","Okt","Nov","Des"];
+    let html = `<option value="">— Data Terbaru —</option>`;
+    items.forEach((it) => {
+      const [y, m, d] = it.date.split("-");
+      html += `<option value="${it.date}">${d} ${bln[parseInt(m, 10) - 1]} ${y}</option>`;
+    });
+    sel.innerHTML = html;
+    if (viewedDate) sel.value = viewedDate;
+  } catch (e) { console.warn("[viewDate]:", e); }
 }
 
 /* ========= Apply role UI ========= */
@@ -382,9 +317,9 @@ async function switchRole(newRole) {
   currentRole = newRole;
   viewedDate = null;
 
-  // Update UI tab dulu supaya user lihat feedback langsung
   applyRoleUI();
-  if (viewDateFp) viewDateFp.clear(false);
+  const viewDateEl = document.getElementById("viewDate");
+  if (viewDateEl) viewDateEl.value = "";
 
   try {
     showLoading();
@@ -433,17 +368,32 @@ function bindEvents() {
   });
 
   const viewDateEl = document.getElementById("viewDate");
-  // Handler pemilihan tanggal ditangani oleh Flatpickr onChange
-  // di populateViewDateOptions(), jadi tidak perlu addEventListener di sini.
+  if (viewDateEl) {
+    viewDateEl.addEventListener("change", async (e) => {
+      const d = e.target.value;
+      if (!d) return;
+      try {
+        showLoading();
+        await loadByDate(d);
+        await renderAll();
+        hideLoading();
+        toast("info", `Menampilkan ${currentRole} ${d}`);
+      } catch (err) {
+        hideLoading();
+        Swal.fire({ icon: "error", title: "Snapshot tidak ditemukan",
+          text: `Tidak ada data ${currentRole} untuk ${d}.` });
+        viewDateEl.value = "";
+        viewedDate = null;
+      }
+    });
+  }
 
   const btnViewLatest = document.getElementById("btnViewLatest");
   if (btnViewLatest)
     btnViewLatest.addEventListener("click", async () => {
       try {
         showLoading();
-        if (viewDateFp) viewDateFp.clear(false);
-        else if (viewDateEl) viewDateEl.value = "";
-        viewedDate = null;
+        if (viewDateEl) viewDateEl.value = "";
         await loadByDate(null);
         await renderAll();
         hideLoading();
