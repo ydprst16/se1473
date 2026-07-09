@@ -27,6 +27,12 @@
     <!-- SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <!-- Flatpickr (datepicker) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/themes/dark.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/id.js"></script>
+
     <style>
         :root {
             --bg: #070b14;
@@ -148,16 +154,6 @@
             border-color: var(--primary);
         }
 
-        🎨 Patch CSS — Tambahkan di index.php CARI di block <style>(sekitar baris 145 — hover style KPI existing): .kpi-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--primary);
-        }
-
-        TEPAT SETELAH block itu (setelah
-        }
-
-        penutup),
-        sisipkan CSS baru berikut:
         /* ============================================================
            Interactive Cards — hover + touch feedback untuk SEMUA card
            ============================================================ */
@@ -612,7 +608,8 @@
                 padding: 4px 8px !important;
             }
 
-            .header-right>.d-flex select#viewDate {
+            .header-right>.d-flex select#viewDate,
+            .header-right>.d-flex input#viewDate {
                 width: auto !important;
                 flex: 1;
                 font-size: 12px;
@@ -974,6 +971,86 @@
         .kpi-card.backlog-green {
             border-color: rgba(34, 197, 94, .35);
         }
+
+        /* ===== Flatpickr customization ===== */
+        .flatpickr-calendar {
+            font-family: 'Inter', sans-serif;
+            border: 1px solid var(--border);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
+        }
+
+        .flatpickr-day.has-data {
+            font-weight: 600;
+            color: #22c55e !important;
+            position: relative;
+        }
+
+        .flatpickr-day.has-data::after {
+            content: "";
+            position: absolute;
+            bottom: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 6px rgba(34, 197, 94, .8);
+        }
+
+        .flatpickr-day.selected.has-data,
+        .flatpickr-day.selected.has-data::after {
+            color: #fff !important;
+        }
+
+        .flatpickr-day.selected.has-data::after {
+            background: #fff;
+            box-shadow: 0 0 6px rgba(255, 255, 255, .6);
+        }
+
+        .flatpickr-calendar .fp-legend {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-size: 11px;
+            color: var(--text);
+            opacity: .75;
+            padding: 6px 8px 8px;
+            border-top: 1px solid rgba(255, 255, 255, .06);
+        }
+
+        .flatpickr-calendar .fp-legend .fp-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #22c55e;
+            box-shadow: 0 0 6px rgba(34, 197, 94, .8);
+        }
+
+        [data-bs-theme="light"] .flatpickr-calendar {
+            background: #ffffff;
+            color: #1f2937;
+            border-color: #e5e7eb;
+        }
+
+        [data-bs-theme="light"] .flatpickr-months .flatpickr-month,
+        [data-bs-theme="light"] .flatpickr-weekdays,
+        [data-bs-theme="light"] .flatpickr-weekday {
+            background: #ffffff;
+            color: #1f2937;
+            fill: #1f2937;
+        }
+
+        [data-bs-theme="light"] .flatpickr-day {
+            color: #1f2937;
+        }
+
+        [data-bs-theme="light"] .flatpickr-day.flatpickr-disabled,
+        [data-bs-theme="light"] .flatpickr-day.prevMonthDay,
+        [data-bs-theme="light"] .flatpickr-day.nextMonthDay {
+            color: #9ca3af;
+        }
     </style>
 
 </head>
@@ -1006,10 +1083,9 @@
                 style="background: var(--card-solid); border:1px solid var(--border); border-radius:10px; padding:6px 10px;">
                 <i class="bi bi-calendar3"></i>
                 <label for="viewDate" class="m-0 small text-secondary">Lihat:</label>
-                <select id="viewDate" class="form-select form-select-sm"
-                    style="width: 170px; background: var(--bg-2); color: var(--text); border:1px solid var(--border); text-align:center; text-align-last:center;">
-                    <option value="">— Data Terbaru —</option>
-                </select>
+                <input id="viewDate" type="text" class="form-control form-control-sm" autocomplete="off"
+                    placeholder="— Data Snapshot —" readonly
+                    style="width: 170px; background: var(--bg-2); color: var(--text); border:1px solid var(--border); text-align:center; cursor:pointer;" />
                 <button class="btn btn-sm btn-outline-light" id="btnViewLatest" title="Kembali ke data terbaru">
                     <i class="bi bi-house-door"></i>
                 </button>
