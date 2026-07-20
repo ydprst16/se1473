@@ -1399,13 +1399,13 @@
                                 </small>
                             </div>
 
-                            <!-- Daftar snapshot yang sudah ada -->
+                            <!-- Daftar snapshot yang sudah ada
                             <div class="mt-3">
                                 <small class="text-secondary">
                                     Snapshot tersimpan:
                                     <span id="snapshotList" class="fw-semibold">memuat...</span>
                                 </small>
-                            </div>
+                            </div> -->
 
                         </div>
 
