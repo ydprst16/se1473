@@ -34,7 +34,11 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/id.js"></script>
 
     <style>
-        :root {
+        /* ================================================================
+           THEME TOKENS — DARK (default) & LIGHT
+           ================================================================ */
+        :root,
+        [data-bs-theme="dark"] {
             --bg: #070b14;
             --bg-2: #0b1220;
             --card: linear-gradient(180deg, #101827 0%, #0b1220 100%);
@@ -49,6 +53,44 @@
             --info: #06b6d4;
             --purple: #8b5cf6;
             --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+
+            /* alias yang tadinya di-hardcode */
+            --cmp-card-bg: linear-gradient(180deg, #101827 0%, #0b1220 100%);
+            --cmp-card-text: #ffffff;
+            --cmp-head-text: #e5e7eb;
+            --cmp-name-text: #f3f4f6;
+            --value-white: #ffffff;
+            --tbl-track-bg: rgba(255, 255, 255, .08);
+            --tbl-label-text: #f1f5f9;
+            --row-even-bg: rgba(255, 255, 255, .025);
+            --row-hover-bg: rgba(59, 130, 246, .10);
+        }
+
+        [data-bs-theme="light"] {
+            --bg: #f6f8fb;
+            --bg-2: #ffffff;
+            --card: linear-gradient(180deg, #ffffff 0%, #f3f5f9 100%);
+            --card-solid: #ffffff;
+            --text: #0f172a;
+            --text-mute: #64748b;
+            --border: #e2e8f0;
+            --primary: #2563eb;
+            --success: #16a34a;
+            --warning: #d97706;
+            --danger: #dc2626;
+            --info: #0891b2;
+            --purple: #7c3aed;
+            --shadow: 0 8px 24px rgba(15, 23, 42, .08);
+
+            --cmp-card-bg: linear-gradient(180deg, #ffffff 0%, #f3f5f9 100%);
+            --cmp-card-text: #0f172a;
+            --cmp-head-text: #0f172a;
+            --cmp-name-text: #0f172a;
+            --value-white: #0f172a;
+            --tbl-track-bg: rgba(15, 23, 42, .08);
+            --tbl-label-text: #0f172a;
+            --row-even-bg: rgba(15, 23, 42, .03);
+            --row-hover-bg: rgba(37, 99, 235, .08);
         }
 
         * {
@@ -61,6 +103,7 @@
         body {
             background: var(--bg);
             color: var(--text);
+            transition: background .25s ease, color .25s ease;
         }
 
         .header {
@@ -147,6 +190,7 @@
             position: relative;
             overflow: hidden;
             color: var(--text);
+            cursor: default;
         }
 
         .kpi-card:hover {
@@ -154,13 +198,20 @@
             border-color: var(--primary);
         }
 
-        /* ============================================================
-           Interactive Cards — hover + touch feedback untuk SEMUA card
-           ============================================================ */
+        .kpi-card:active {
+            transform: translateY(-2px) scale(.98);
+            transition-duration: .08s;
+        }
 
-        /* Chart cards */
         .chart-card {
-            transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            padding: 20px;
+            margin-top: 25px;
+            color: var(--text);
+            transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease, background .25s ease;
             cursor: default;
         }
 
@@ -175,9 +226,21 @@
             transition-duration: .08s;
         }
 
-        /* Comparison cards */
+        .chart-card.equal-height {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
         .cmp-card {
-            transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+            background: var(--cmp-card-bg);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 18px 16px;
+            color: var(--cmp-card-text);
+            height: 100%;
+            box-shadow: var(--shadow);
+            transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease, background .25s ease;
             cursor: default;
         }
 
@@ -192,17 +255,6 @@
             transition-duration: .08s;
         }
 
-        /* KPI card — tambah efek klik/touch (hover-nya sudah ada di atas) */
-        .kpi-card {
-            cursor: default;
-        }
-
-        .kpi-card:active {
-            transform: translateY(-2px) scale(.98);
-            transition-duration: .08s;
-        }
-
-        /* Comparison row items — feedback halus saat hover */
         .cmp-row {
             transition: background-color .2s ease, padding-left .2s ease;
         }
@@ -213,7 +265,6 @@
             border-radius: 8px;
         }
 
-        /* Performer list items — feedback saat hover */
         .performer-list .border-bottom {
             transition: background-color .2s ease, padding-left .2s ease;
             border-radius: 8px;
@@ -224,15 +275,12 @@
             padding-left: 12px !important;
         }
 
-        /* Touch device tap highlight */
         .kpi-card,
         .chart-card,
         .cmp-card {
             -webkit-tap-highlight-color: rgba(59, 130, 246, .15);
         }
 
-        /* Untuk device dengan touch, aktifkan hover pakai :focus-within juga
-           supaya efek tetap muncul saat tap (tanpa mouse) */
         @media (hover: none) {
 
             .kpi-card:active,
@@ -275,22 +323,6 @@
 
         .down {
             color: var(--danger);
-        }
-
-        .chart-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            box-shadow: var(--shadow);
-            padding: 20px;
-            margin-top: 25px;
-            color: var(--text);
-        }
-
-        .chart-card.equal-height {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
         }
 
         .chart-body {
@@ -339,7 +371,7 @@
             font-weight: bold;
         }
 
-        /* Tabulator dark (override midnight theme) */
+        /* Tabulator theme-aware */
         .tabulator {
             border: none !important;
             border-radius: 15px;
@@ -383,12 +415,12 @@
 
         .tabulator-row.tabulator-row-even,
         .tabulator .tabulator-row.tabulator-row-even {
-            background-color: rgba(255, 255, 255, .025) !important;
+            background-color: var(--row-even-bg) !important;
         }
 
         .tabulator-row:hover,
         .tabulator .tabulator-row:hover {
-            background-color: rgba(59, 130, 246, .10) !important;
+            background-color: var(--row-hover-bg) !important;
         }
 
         .tabulator-row .tabulator-cell,
@@ -417,7 +449,6 @@
             color: var(--text-mute) !important;
         }
 
-        /* Performer List (Top Performer / Perlu Pendampingan) */
         .performer-list .border-bottom {
             border-color: var(--border) !important;
         }
@@ -436,14 +467,13 @@
         }
 
         .performer-list .text-primary {
-            color: #60a5fa !important;
+            color: var(--primary) !important;
         }
 
         .performer-list .text-success {
-            color: #4ade80 !important;
+            color: var(--success) !important;
         }
 
-        /* Modal dark */
         .modal-content {
             background: var(--card-solid);
             color: var(--text);
@@ -471,19 +501,209 @@
             color: var(--text-mute) !important;
         }
 
-        /* === Comparison Cards === */
-        .cmp-section {
-            margin-top: 24px;
+        /* Upload modal */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 22px 18px;
+            text-align: center;
+            transition: background-color .15s, border-color .15s;
+            cursor: pointer;
+            background: rgba(59, 130, 246, 0.03);
         }
 
-        .cmp-card {
-            background: linear-gradient(180deg, #101827 0%, #0b1220 100%);
-            border: 1px solid #1f2937;
-            border-radius: 18px;
-            padding: 18px 16px;
-            color: #fff;
+        .drop-zone:hover,
+        .drop-zone.is-dragover {
+            border-color: var(--primary);
+            background: rgba(59, 130, 246, 0.10);
+        }
+
+        .drop-zone-icon {
+            font-size: 2rem;
+            color: var(--primary);
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .drop-zone-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+
+        .drop-zone-sub {
+            font-size: 0.82rem;
+            color: var(--text-mute);
+            margin-top: 4px;
+        }
+
+        .drop-zone code {
+            background: rgba(127, 127, 127, 0.12);
+            padding: 1px 6px;
+            border-radius: 4px;
+            color: var(--info);
+        }
+
+        .file-list {
+            max-height: 300px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .file-list:empty::before {
+            content: "Belum ada file dipilih.";
+            color: var(--text-mute);
+            font-size: 0.8rem;
+            font-style: italic;
+        }
+
+        .file-item {
+            background: var(--row-even-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 12px;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            grid-template-rows: auto auto;
+            column-gap: 10px;
+            row-gap: 4px;
+            align-items: center;
+        }
+
+        .file-item .fi-status {
+            width: 22px;
+            text-align: center;
+            font-size: 1rem;
+            grid-row: 1 / span 2;
+        }
+
+        .file-item .fi-name {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .file-item .fi-meta {
+            grid-column: 2;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            font-size: 0.72rem;
+            color: var(--text-mute);
+        }
+
+        .file-item .fi-actions {
+            grid-column: 3;
+            grid-row: 1 / span 2;
+            display: flex;
+            gap: 4px;
+        }
+
+        .file-item .fi-remove {
+            background: transparent;
+            border: 0;
+            color: var(--text-mute);
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .file-item .fi-remove:hover {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .file-item .fi-progress {
+            grid-column: 1 / -1;
+            height: 4px;
+            background: var(--tbl-track-bg);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .file-item .fi-progress-bar {
             height: 100%;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, .25);
+            width: 0%;
+            background: linear-gradient(90deg, var(--primary), #6366f1);
+            transition: width .2s ease;
+        }
+
+        .fi-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
+
+        .fi-badge-pencacah {
+            background: rgba(34, 197, 94, 0.15);
+            color: #22c55e;
+        }
+
+        .fi-badge-pengawas {
+            background: rgba(59, 130, 246, 0.18);
+            color: #60a5fa;
+        }
+
+        .fi-badge-unknown {
+            background: rgba(148, 163, 184, 0.15);
+            color: #64748b;
+        }
+
+        .fi-badge-date {
+            background: rgba(6, 182, 212, 0.15);
+            color: #0891b2;
+        }
+
+        .fi-badge-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+        }
+
+        .fi-error-msg {
+            grid-column: 1 / -1;
+            font-size: 0.72rem;
+            color: var(--danger);
+            margin-top: 2px;
+        }
+
+        .pw-input-wrap {
+            position: relative;
+        }
+
+        .pw-input-wrap .form-control {
+            padding-right: 44px;
+        }
+
+        .pw-input-toggle {
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: transparent;
+            border: 0;
+            color: var(--text-mute);
+            padding: 6px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .pw-input-toggle:hover {
+            color: var(--primary);
+        }
+
+        /* Comparison cards */
+        .cmp-section {
+            margin-top: 24px;
         }
 
         .cmp-head {
@@ -494,9 +714,9 @@
             font-size: 13px;
             letter-spacing: .5px;
             text-transform: uppercase;
-            color: #e5e7eb;
+            color: var(--cmp-head-text);
             padding-bottom: 12px;
-            border-bottom: 1px solid #1f2937;
+            border-bottom: 1px solid var(--border);
             margin-bottom: 10px;
         }
 
@@ -509,7 +729,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 12px 4px;
-            border-bottom: 1px dashed #1f2937;
+            border-bottom: 1px dashed var(--border);
             font-size: 14px;
         }
 
@@ -518,7 +738,7 @@
         }
 
         .cmp-name {
-            color: #f3f4f6;
+            color: var(--cmp-name-text);
             font-weight: 500;
         }
 
@@ -528,49 +748,44 @@
         }
 
         .value-white {
-            color: #ffffff;
+            color: var(--value-white);
         }
 
         .value-green {
-            color: #22c55e;
+            color: var(--success);
         }
 
         .value-red {
-            color: #ef4444;
+            color: var(--danger);
         }
 
         .value-mute {
-            color: #9ca3af;
+            color: var(--text-mute);
         }
 
         .cmp-empty {
-            color: #9ca3af;
+            color: var(--text-mute);
             text-align: center;
             padding: 24px 0;
             font-size: 13px;
         }
 
         .cmp-subtitle {
-            color: #6b7280;
+            color: var(--text-mute);
             font-size: 13px;
             margin-top: 4px;
         }
 
         .cmp-subtitle.text-warning {
-            color: #f59e0b !important;
+            color: var(--warning) !important;
         }
 
-        /* ============================= */
-        /* MOBILE — COMPACT MODE         */
-        /* ============================= */
+        /* Mobile compact */
         @media (max-width: 768px) {
-
-            /* Hilangkan horizontal scroll body */
             body {
                 overflow-x: hidden;
             }
 
-            /* Header: stack vertikal, padat */
             .header {
                 padding: 10px 12px;
                 flex-direction: column;
@@ -630,12 +845,10 @@
                 font-size: 13px;
             }
 
-            /* Container padding lebih kecil */
             .container-dashboard {
                 padding: 12px;
             }
 
-            /* Tighter gutter */
             .row.g-4 {
                 --bs-gutter-x: .6rem;
                 --bs-gutter-y: .6rem;
@@ -645,7 +858,6 @@
                 margin-top: .75rem !important;
             }
 
-            /* KPI cards compact */
             .kpi-card {
                 height: auto;
                 min-height: 88px;
@@ -673,7 +885,6 @@
                 margin-top: 2px;
             }
 
-            /* Chart cards */
             .chart-card {
                 padding: 14px;
                 border-radius: 14px;
@@ -689,12 +900,10 @@
                 font-size: 15px;
             }
 
-            /* Chart boxes — pendekkan supaya muat layar */
             .chart-box {
                 height: 280px;
             }
 
-            /* Performer list compact */
             .performer-list {
                 max-height: 320px;
             }
@@ -712,7 +921,6 @@
                 padding-bottom: .35rem !important;
             }
 
-            /* Progress bar */
             .progress {
                 height: 16px;
                 margin-top: 8px;
@@ -722,7 +930,6 @@
                 font-size: 11px;
             }
 
-            /* Comparison cards */
             .cmp-section {
                 margin-top: 14px;
             }
@@ -751,7 +958,6 @@
                 font-size: 11px;
             }
 
-            /* Tabulator: compact + scroll horizontal sendiri */
             .tabulator {
                 border-radius: 10px;
                 font-size: 11px;
@@ -789,7 +995,6 @@
                 padding: 2px 6px !important;
             }
 
-            /* Modal */
             .modal-dialog {
                 margin: .5rem;
             }
@@ -798,13 +1003,11 @@
                 font-size: 15px;
             }
 
-            /* Footer */
             footer small {
                 font-size: 10.5px;
             }
         }
 
-        /* Extra compact untuk HP sangat kecil */
         @media (max-width: 420px) {
             .kpi-value {
                 font-size: 18px;
@@ -832,9 +1035,7 @@
             }
         }
 
-        /* ============================= */
-        /* TABS DARK STYLE               */
-        /* ============================= */
+        /* Tabs dark/light aware */
         .nav-tabs.nav-tabs-dark {
             border-bottom: 1px solid var(--border);
         }
@@ -867,7 +1068,7 @@
             font-size: 14px;
         }
 
-        /* Progress cell vertical (di dalam tabulator) */
+        /* Progress cell in tabulator */
         .tbl-progress-wrap {
             display: flex;
             flex-direction: column;
@@ -879,7 +1080,7 @@
         .tbl-progress-track {
             width: 100%;
             height: 7px;
-            background: rgba(255, 255, 255, .08);
+            background: var(--tbl-track-bg);
             border-radius: 999px;
             overflow: hidden;
             box-shadow: inset 0 1px 2px rgba(0, 0, 0, .35);
@@ -898,7 +1099,7 @@
             gap: 6px;
             font-weight: 700;
             font-size: 11.5px;
-            color: #f1f5f9;
+            color: var(--tbl-label-text);
             font-variant-numeric: tabular-nums;
             letter-spacing: .2px;
             line-height: 1;
@@ -909,7 +1110,7 @@
             height: 7px;
             border-radius: 50%;
             flex-shrink: 0;
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, .06);
+            box-shadow: 0 0 0 2px rgba(127, 127, 127, .12);
         }
 
         @media (max-width: 768px) {
@@ -924,7 +1125,7 @@
             }
         }
 
-        /* ===== Role Tabs ===== */
+        /* Role tabs */
         .role-tabs {
             display: inline-flex;
             background: var(--bg-2);
@@ -959,7 +1160,6 @@
             box-shadow: 0 4px 12px rgba(59, 130, 246, .35);
         }
 
-        /* Backlog color (khusus pengawas Submitted card) */
         .kpi-card.backlog-red {
             border-color: rgba(239, 68, 68, .5);
         }
@@ -972,7 +1172,7 @@
             border-color: rgba(34, 197, 94, .35);
         }
 
-        /* ===== Flatpickr customization ===== */
+        /* Flatpickr */
         .flatpickr-calendar {
             font-family: 'Inter', sans-serif;
             border: 1px solid var(--border);
@@ -981,7 +1181,7 @@
 
         .flatpickr-day.has-data {
             font-weight: 600;
-            color: #22c55e !important;
+            color: var(--success) !important;
             position: relative;
         }
 
@@ -994,7 +1194,7 @@
             width: 5px;
             height: 5px;
             border-radius: 50%;
-            background: #22c55e;
+            background: var(--success);
             box-shadow: 0 0 6px rgba(34, 197, 94, .8);
         }
 
@@ -1017,14 +1217,14 @@
             color: var(--text);
             opacity: .75;
             padding: 6px 8px 8px;
-            border-top: 1px solid rgba(255, 255, 255, .06);
+            border-top: 1px solid var(--border);
         }
 
         .flatpickr-calendar .fp-legend .fp-dot {
             width: 6px;
             height: 6px;
             border-radius: 50%;
-            background: #22c55e;
+            background: var(--success);
             box-shadow: 0 0 6px rgba(34, 197, 94, .8);
         }
 
@@ -1058,21 +1258,17 @@
 <body>
 
     <header class="header">
-
         <div>
             <div class="logo">
                 <i class="bi bi-bar-chart-fill"></i>
                 <div>
                     SE2026 Monitoring Center
-                    <div class="sub-title">
-                        Monitoring Pencacah • Kota Dumai
-                    </div>
+                    <div class="sub-title">Monitoring Pencacah • Kota Dumai</div>
                 </div>
             </div>
         </div>
 
         <div class="header-right">
-
             <span class="text-secondary">
                 <i class="bi bi-clock-history"></i>
                 Last Update
@@ -1091,31 +1287,15 @@
                 </button>
             </div>
 
-            <button class="btn-action" id="btnOpenUpload">
-                <i class="bi bi-upload"></i>
-                Upload
-            </button>
-
-            <button class="btn-action" id="btnRefresh">
-                <i class="bi bi-arrow-clockwise"></i>
-                Refresh
-            </button>
-
-            <button class="btn-action" id="btnDarkMode">
-                <i class="bi bi-moon"></i>
-            </button>
-
-            <button class="btn-action" id="btnFullscreen">
-                <i class="bi bi-arrows-fullscreen"></i>
-            </button>
-
+            <button class="btn-action" id="btnOpenUpload"><i class="bi bi-upload"></i> Upload</button>
+            <button class="btn-action" id="btnRefresh"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+            <button class="btn-action" id="btnDarkMode"><i class="bi bi-moon"></i></button>
+            <button class="btn-action" id="btnFullscreen"><i class="bi bi-arrows-fullscreen"></i></button>
         </div>
-
     </header>
 
     <div class="container-dashboard">
 
-        <!-- Role Selector Tabs -->
         <div class="mb-4 d-flex justify-content-center">
             <div class="role-tabs">
                 <button class="role-tab active" data-role-tab="pencacah">
@@ -1128,9 +1308,7 @@
         </div>
 
         <div class="row g-4">
-
             <?php
-
             $cards = [
                 ["Assignment", "assignment", "bi-folder2-open", "#2563eb"],
                 ["Open", "open", "bi-folder", "#0ea5e9"],
@@ -1141,9 +1319,7 @@
                 ["Revoke", "revoke", "bi-arrow-counterclockwise", "#374151"],
                 ["Progress", "progress", "bi-speedometer2", "#10b981"]
             ];
-
-            foreach ($cards as $c) {
-                ?>
+            foreach ($cards as $c) { ?>
                 <div class="col-6 col-md-6 col-lg-4 col-xl-3">
                     <div class="kpi-card">
                         <i class="bi <?= $c[2] ?>" style="color:<?= $c[3] ?>"></i>
@@ -1153,62 +1329,36 @@
                     </div>
                 </div>
             <?php } ?>
-
         </div>
 
-        <!-- ============================= -->
-        <!-- PROGRESS KESELURUHAN -->
-        <!-- ============================= -->
-
         <div class="chart-card">
-
             <div class="d-flex justify-content-between align-items-center">
                 <div class="chart-title">Progress Keseluruhan</div>
                 <strong id="progressText">0%</strong>
             </div>
-
             <div class="progress">
                 <div id="overallProgress" class="progress-bar bg-success progress-bar-striped progress-bar-animated"
-                    style="width:0%">
-                    0%
-                </div>
+                    style="width:0%">0%</div>
             </div>
-
         </div>
 
-        <!-- ============================= -->
-        <!-- COMPARISON: HARI INI vs KEMARIN -->
-        <!-- ============================= -->
-
         <div class="cmp-section">
-
             <div class="d-flex justify-content-between align-items-end mb-2">
                 <div>
                     <div class="chart-title" id="comparisonMainTitle">Perbandingan Harian PPL</div>
                     <div id="comparisonSubtitle" class="cmp-subtitle">Memuat...</div>
                 </div>
             </div>
-
-            <div class="row g-3" id="comparisonCards">
-                <!-- diisi javascript -->
-            </div>
-
+            <div class="row g-3" id="comparisonCards"></div>
         </div>
 
-        <!-- ============================= -->
-        <!-- ROW 1 : STATUS & RANKING -->
-        <!-- ============================= -->
-
         <div class="row mt-4 g-4">
-
             <div class="col-xl-4 d-flex">
                 <div class="chart-card equal-height w-100">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div class="chart-title">
-                            <i class="bi bi-pie-chart-fill text-primary"></i>
-                            Status Dokumen
+                            <i class="bi bi-pie-chart-fill text-primary"></i> Status Dokumen
                         </div>
-                        <!-- <span class="badge bg-primary">Live</span> -->
                     </div>
                     <div class="chart-body">
                         <div id="statusChart" class="chart-box"></div>
@@ -1231,221 +1381,195 @@
                 </div>
             </div>
 
-        </div>
-
-        <!-- ============================= -->
-        <!-- ROW 2 -->
-        <!-- ============================= -->
-
-        <div class="row mt-4 g-4">
-
-            <div class="col-xl-6 d-flex">
-                <div class="chart-card equal-height w-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="chart-title">
-                            <i class="bi bi-geo-alt-fill text-danger"></i>
-                            Ranking Kecamatan
-                        </div>
-                        <span class="badge bg-danger">Progress</span>
-                    </div>
-                    <div class="chart-body">
-                        <div id="districtChart" class="chart-box"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-xl-6 d-flex">
-                <div class="chart-card equal-height w-100">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div class="chart-title">
-                            <i class="bi bi-graph-up-arrow text-warning"></i>
-                            Distribusi Progress
-                        </div>
-                        <span class="badge bg-warning text-dark">Histogram</span>
-                    </div>
-                    <div class="chart-body">
-                        <div id="distributionChart" class="chart-box"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ============================= -->
-            <!-- TOP & BOTTOM -->
-            <!-- ============================= -->
-
             <div class="row mt-4 g-4">
-
-                <div class="col-lg-6">
-                    <div class="chart-card">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="chart-title">🏆 Top Performer</div>
-                            <span class="badge bg-success">Top 10</span>
+                <div class="col-xl-6 d-flex">
+                    <div class="chart-card equal-height w-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="chart-title">
+                                <i class="bi bi-geo-alt-fill text-danger"></i> Ranking Kecamatan
+                            </div>
+                            <span class="badge bg-danger">Progress</span>
                         </div>
-                        <div id="topPerformer" class="performer-list">
-                            <!-- diisi javascript -->
-                        </div>
-                    </div>
-                </div>
-
-                <div class="col-lg-6">
-                    <div class="chart-card">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="chart-title">⚠️ Perlu Pendampingan</div>
-                            <span class="badge bg-danger">Bottom 10</span>
-                        </div>
-                        <div id="bottomPerformer" class="performer-list">
-                            <!-- diisi javascript -->
+                        <div class="chart-body">
+                            <div id="districtChart" class="chart-box"></div>
                         </div>
                     </div>
                 </div>
 
-            </div>
-
-            <!-- ============================= -->
-            <!-- DATA GRID (Tab 1 & Tab 2) -->
-            <!-- ============================= -->
-
-            <div class="chart-card mt-4">
-
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                    <div class="chart-title m-0">
-                        <i class="bi bi-table"></i>
-                        <span id="tableTitle">Data Enumerator</span>
-                    </div>
-                    <div>
-                        <button class="btn btn-success btn-sm" id="btnExport" data-testid="btn-export-excel">
-                            <i class="bi bi-file-earmark-excel"></i>
-                            Export Excel
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Tabs -->
-                <ul class="nav nav-tabs nav-tabs-dark mb-3" id="tableTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="tab-summary-btn" data-bs-toggle="tab"
-                            data-bs-target="#tab-summary" type="button" role="tab" data-testid="tab-summary">
-                            <i class="bi bi-person-lines-fill me-1"></i>
-                            Ringkasan per Petugas
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="tab-detail-btn" data-bs-toggle="tab" data-bs-target="#tab-detail"
-                            type="button" role="tab" data-testid="tab-detail">
-                            <i class="bi bi-geo-alt me-1"></i>
-                            Detail per Kecamatan
-                        </button>
-                    </li>
-                </ul>
-
-                <!-- Tab Panels -->
-                <div class="tab-content" id="tableTabsContent">
-
-                    <div class="tab-pane fade show active" id="tab-summary" role="tabpanel" data-testid="panel-summary">
-                        <div id="gridTable"></div>
-                    </div>
-
-                    <div class="tab-pane fade" id="tab-detail" role="tabpanel" data-testid="panel-detail">
-                        <div id="gridTableDetail"></div>
-                    </div>
-
-                </div>
-
-            </div>
-
-            <!-- ============================= -->
-            <!-- UPLOAD MODAL -->
-            <!-- ============================= -->
-
-            <div class="modal fade" id="uploadModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-
-                        <div class="modal-header">
-                            <h5 class="modal-title">Upload JSON</h5>
-                            <button class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="col-xl-6 d-flex">
+                    <div class="chart-card equal-height w-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="chart-title m-0">
+                                <i class="bi bi-graph-up-arrow text-warning"></i> Distribusi Progress
+                            </div>
+                            <div class="d-inline-flex align-items-center gap-2">
+                                <span
+                                    class="badge bg-warning-subtle text-warning border border-warning-subtle fw-normal">
+                                    Histogram
+                                </span>
+                                <button id="btnExportDistribution" type="button"
+                                    class="btn btn-sm btn-success-subtle text-success border border-success-subtle"
+                                    data-bs-toggle="tooltip" title="Export daftar petugas per bucket ke Excel">
+                                    <i class="bi bi-file-earmark-excel me-1"></i> Export
+                                </button>
+                            </div>
                         </div>
+                        <div class="chart-body">
+                            <div id="distributionChart" class="chart-box"></div>
+                        </div>
+                    </div>
+                </div>
 
-                        <div class="modal-body">
+                <div class="row mt-4 g-4">
+                    <div class="col-lg-6">
+                        <div class="chart-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="chart-title">🏆 Top Performer</div>
+                                <span class="badge bg-success">Top 10</span>
+                            </div>
+                            <div id="topPerformer" class="performer-list"></div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="chart-card">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="chart-title">⚠️ Perlu Pendampingan</div>
+                                <span class="badge bg-danger">Bottom 10</span>
+                            </div>
+                            <div id="bottomPerformer" class="performer-list"></div>
+                        </div>
+                    </div>
+                </div>
 
-                            <!-- File JSON -->
-                            <label class="form-label small text-secondary mb-1">File JSON</label>
-                            <input type="file" id="jsonFile" accept=".json" class="form-control">
+                <div class="chart-card mt-4">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                        <div class="chart-title m-0">
+                            <i class="bi bi-table"></i> <span id="tableTitle">Data Enumerator</span>
+                        </div>
+                        <div>
+                            <button class="btn btn-success btn-sm" id="btnExport" data-testid="btn-export-excel">
+                                <i class="bi bi-file-earmark-excel"></i> Export Excel
+                            </button>
+                        </div>
+                    </div>
 
-                            <!-- Tanggal Snapshot -->
-                            <div class="mt-3">
-                                <label for="jsonDate" class="form-label small text-secondary mb-1">
-                                    Tanggal Snapshot
-                                    <span class="text-warning">(otomatis terisi dari nama file)</span>
-                                </label>
-                                <input type="date" id="jsonDate" class="form-control">
+                    <ul class="nav nav-tabs nav-tabs-dark mb-3" id="tableTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tab-summary-btn" data-bs-toggle="tab"
+                                data-bs-target="#tab-summary" type="button" role="tab" data-testid="tab-summary">
+                                <i class="bi bi-person-lines-fill me-1"></i> Ringkasan per Petugas
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-detail-btn" data-bs-toggle="tab"
+                                data-bs-target="#tab-detail" type="button" role="tab" data-testid="tab-detail">
+                                <i class="bi bi-geo-alt me-1"></i> Detail per Kecamatan
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="tableTabsContent">
+                        <div class="tab-pane fade show active" id="tab-summary" role="tabpanel"
+                            data-testid="panel-summary">
+                            <div id="gridTable"></div>
+                        </div>
+                        <div class="tab-pane fade" id="tab-detail" role="tabpanel" data-testid="panel-detail">
+                            <div id="gridTableDetail"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal fade" id="uploadModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">
+                                    <i class="bi bi-cloud-upload"></i>
+                                    Upload JSON <span class="badge bg-secondary ms-1" id="uploadCount">0</span>
+                                </h5>
+                                <button class="btn-close" data-bs-dismiss="modal"
+                                    data-testid="upload-modal-close"></button>
                             </div>
 
-                            <!-- Info -->
-                            <div class="mt-3">
-                                <small class="text-secondary d-block">
-                                    <i class="bi bi-info-circle"></i>
-                                    Pilih <code>latest.json</code> hasil export FASIH.
-                                    Sistem akan auto-deteksi tanggal dari nama file
-                                    (format <code>..._YYYY-MM-DD.json</code>).
-                                </small>
-                                <small class="text-secondary d-block mt-2">
-                                    <i class="bi bi-check-circle text-success"></i>
-                                    Tanggal = hari ini &rarr; ganti data live + simpan snapshot
-                                </small>
-                                <small class="text-secondary d-block">
-                                    <i class="bi bi-archive text-info"></i>
-                                    Tanggal = lampau &rarr; hanya simpan sebagai snapshot
-                                </small>
+                            <div class="modal-body">
+                                <div id="dropZone" class="drop-zone" data-testid="upload-dropzone">
+                                    <i class="bi bi-cloud-upload drop-zone-icon"></i>
+                                    <div class="drop-zone-title">Drag &amp; drop file <code>.json</code> di sini</div>
+                                    <div class="drop-zone-sub">
+                                        atau
+                                        <button type="button" id="btnPickFiles"
+                                            class="btn btn-sm btn-outline-primary ms-1" data-testid="upload-pick-files">
+                                            Pilih file
+                                        </button>
+                                        &nbsp;·&nbsp; max <span id="maxBatchLbl">20</span> file, 10 MB per file
+                                    </div>
+                                    <input type="file" id="jsonFile" accept=".json,application/json" class="d-none"
+                                        multiple data-testid="upload-file-input">
+                                </div>
+
+                                <div id="fileList" class="file-list mt-3" data-testid="upload-file-list"></div>
+
+                                <div class="mt-3">
+                                    <label for="uploadPassword" class="form-label small text-secondary mb-1">
+                                        <i class="bi bi-shield-lock"></i> Password Upload
+                                    </label>
+                                    <div class="pw-input-wrap">
+                                        <input type="password" id="uploadPassword" class="form-control"
+                                            placeholder="Masukkan password upload" autocomplete="current-password"
+                                            data-testid="upload-password">
+                                        <button type="button" class="pw-input-toggle" id="btnTogglePw"
+                                            data-testid="upload-toggle-pw">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3">
+                                    <small class="text-secondary d-block">
+                                        <i class="bi bi-info-circle"></i>
+                                        Role &amp; tanggal dideteksi otomatis dari isi &amp; nama file. Tanggal <b>hari
+                                            ini</b> menjadi data live + snapshot; tanggal lampau hanya snapshot.
+                                    </small>
+                                </div>
                             </div>
 
-                            <!-- Daftar snapshot yang sudah ada
-                            <div class="mt-3">
-                                <small class="text-secondary">
-                                    Snapshot tersimpan:
-                                    <span id="snapshotList" class="fw-semibold">memuat...</span>
-                                </small>
-                            </div> -->
-
+                            <div class="modal-footer">
+                                <a href="audit.php" class="btn btn-outline-secondary me-auto" target="_blank"
+                                    data-testid="upload-audit-link">
+                                    <i class="bi bi-clipboard-data"></i> Audit Log
+                                </a>
+                                <button class="btn btn-secondary" data-bs-dismiss="modal"
+                                    data-testid="upload-cancel">Batal</button>
+                                <button id="btnUpload" class="btn btn-primary" data-testid="upload-submit">
+                                    <i class="bi bi-cloud-arrow-up"></i> Upload Semua
+                                </button>
+                            </div>
                         </div>
-
-                        <div class="modal-footer">
-                            <button class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                            <button id="btnUpload" class="btn btn-primary">Upload</button>
-                        </div>
-
                     </div>
                 </div>
+
+                <footer class="text-center mt-5 mb-4 text-secondary">
+                    <small>
+                        SE2026 Monitoring Center<br>
+                        Powered by Bootstrap 5 • ApexCharts • Grid.js
+                    </small>
+                </footer>
+
             </div>
-            <!-- ============================= -->
-            <!-- FOOTER -->
-            <!-- ============================= -->
 
-            <footer class="text-center mt-5 mb-4 text-secondary">
-                <small>
-                    SE2026 Monitoring Center
-                    <br>
-                    Powered by Bootstrap 5 • ApexCharts • Grid.js
-                </small>
-            </footer>
+            <!-- Bootstrap -->
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+            <!-- SheetJS -->
+            <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+            <script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
 
-        </div>
-
-        <!-- Bootstrap -->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-        <!-- SheetJS -->
-        <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
-        <script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
-
-        <!-- JS -->
-        <script src="js/helper.js"></script>
-        <script src="js/processor.js"></script>
-        <script src="js/charts.js"></script>
-        <script src="js/table.js"></script>
-        <script src="js/comparison.js"></script>
-        <script src="js/app.js"></script>
+            <!-- JS -->
+            <script src="js/helper.js"></script>
+            <script src="js/processor.js"></script>
+            <script src="js/charts.js"></script>
+            <script src="js/table.js"></script>
+            <script src="js/comparison.js"></script>
+            <script src="js/app.js"></script>
 
 </body>
 

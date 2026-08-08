@@ -1,675 +1,125 @@
-# 📊 SE2026 Monitoring Center
+## 1️⃣ Kenapa Progress Nasional PPL ≠ PML?
 
-Dashboard Monitoring Progress **SE2026 Kota Dumai** untuk memantau progres pekerjaan **PPL (Pencacah)** dan **PML (Pengawas)** berdasarkan file JSON hasil export aplikasi **FASIH**.
+Karena **tugas** mereka berbeda, jadi **rumus** progress-nya beda:
 
-Dashboard mendukung monitoring **real-time**, **snapshot harian**, **perbandingan progres**, **ranking petugas**, **ranking kecamatan**, serta analisis perkembangan pekerjaan dari hari ke hari.
+| | **PPL (Pencacah)** | **PML (Pengawas)** |
+|---|---|---|
+| Tugasnya apa? | Kirim dokumen (submit) | Approve dokumen |
+| Progress dihitung dari | Dokumen yang sudah **diproses** | Dokumen yang sudah **di-approve** |
+| Rumus | `(submitted + approved + rejected + revoked) / assignment × 100` | `approved / assignment × 100` |
+| Nama internal | `progressTotal` | `progressApprove` |
 
----
+**Contoh** kalau assignment = 100:
+- 30 submitted + 50 approved + 5 rejected + 5 revoked = 90
+- PPL progress = 90/100 = **90%** (90 dari 100 sudah selesai dari sisi pencacah)
+- PML progress = 50/100 = **50%** (baru 50 yang di-approve, 30 masih backlog)
 
-# ✨ Fitur
+Jadi walaupun angkanya sama, PML pasti ≤ PPL karena approve terjadi SETELAH submit.
 
-- 📈 Monitoring Progress PPL
-- 👨‍💼 Monitoring Progress PML
-- 📊 KPI Dashboard
-- 🏆 Ranking Progress Petugas
-- 🗺️ Ranking Progress Kecamatan
-- 🥧 Status Distribution
-- 📉 Progress Distribution
-- ⭐ Top Performer
-- 📉 Bottom Performer
-- 📅 Daily Comparison
-- 💾 Snapshot History
-- 📤 Upload JSON langsung melalui Dashboard
-- ☁️ Penyimpanan data menggunakan Supabase Storage
-- 🔄 Role-aware Dashboard (PPL & PML)
+**File pengaturan:** `js/processor.js` fungsi `calculateProgress()` dan `calculateSummary()`.
 
 ---
 
-# 🛠️ Teknologi
+## 2️⃣ Card "Perbandingan Harian PPL" — Fix Judul
 
-| Teknologi | Fungsi |
-|-----------|--------|
-| PHP | Backend API |
-| JavaScript | Business Logic |
-| Bootstrap 5 | User Interface |
-| ApexCharts | Visualisasi Grafik |
-| Tabulator | Data Grid |
-| SweetAlert2 | Dialog & Notification |
-| Supabase Storage | Penyimpanan File JSON |
-| JSON | Sumber Data |
+Ada 3 tempat yang perlu diubah agar dinamis per role:
+
+### A. `index.php` — cari:
+```html
+<div class="chart-title">Perbandingan Harian PPL</div>
+```
+**Ganti dengan:**
+```html
+<div class="chart-title" id="comparisonMainTitle">Perbandingan Harian PPL</div>
+```
+
+### B. `js/comparison.js` — cari fungsi `renderComparison()`, di dalamnya ada bagian:
+```js
+  // Sub-judul tanggal
+  const sub = document.getElementById("comparisonSubtitle");
+```
+**TEPAT SEBELUM baris itu, sisipkan:**
+```js
+  // Update judul utama & label sub sesuai role aktif
+  const roleLabel = (typeof currentRole !== "undefined" && currentRole === "pengawas") ? "PML" : "PPL";
+  const mainTitle = document.getElementById("comparisonMainTitle");
+  if (mainTitle) mainTitle.textContent = `Perbandingan Harian ${roleLabel}`;
+```
+
+### C. `js/comparison.js` — ubah 4 title card. Cari dan ganti:
+
+| CARI | GANTI |
+|------|-------|
+| `title: "TOP 5 PPL TERTINGGI",` | ``title: `TOP 5 ${roleLabel} TERTINGGI`,`` |
+| `title: "TOP 5 PPL TERENDAH",` | ``title: `TOP 5 ${roleLabel} TERENDAH`,`` |
+
+Dan cari:
+```js
+sub.textContent = `Hari ini vs ${Comparison.previousDate} • ${matched} dari ${Comparison.items.length} PPL cocok`;
+```
+**Ganti dengan:**
+```js
+sub.textContent = `Hari ini vs ${Comparison.previousDate} • ${matched} dari ${Comparison.items.length} ${roleLabel} cocok`;
+```
+
+*(pastikan `roleLabel` sudah dideklarasikan di atas seperti patch B)*
 
 ---
 
-# 📁 Struktur Project
+## 3️⃣ Apa itu "Backlog Approval"?
 
-```text
-project/
-│
-├── api/
-│   └── history.php
-│
-├── js/
-│   ├── app.js
-│   ├── processor.js
-│   ├── charts.js
-│   ├── comparison.js
-│   ├── helper.js
-│   └── table.js
-│
-├── assets/
-│
-├── index.php
-│
-└── README.md
-```
+**Backlog Approval** = jumlah dokumen yang **sudah dikirim pencacah**, tapi **belum diproses pengawas** (masih menunggu di-approve/reject).
+
+Statusnya di JSON: `"SUBMITTED BY Pencacah"` (dari sudut pandang pengawas, ini adalah **antrian kerja**).
+
+**Kenapa penting?** 
+- Kalau backlog 🟢 <10 → pengawas rajin, review cepat
+- Kalau 🟡 10–50 → mulai numpuk, perlu perhatian
+- Kalau 🔴 >50 → pengawas kewalahan / tidak aktif → butuh pendampingan
+
+Jadi card ini berfungsi sebagai **KPI early-warning** untuk pengawas.
 
 ---
 
-# 🏗️ Arsitektur Sistem
+## 4️⃣ Detail Perhitungan Semua KPI Card
 
-```text
-                JSON Export FASIH
-                       │
-                       ▼
-                Upload Dashboard
-                 (history.php)
-                       │
-                       ▼
-              Supabase Storage
-                       │
-      ┌────────────────┴────────────────┐
-      ▼                                 ▼
- latest.json                 latest_pengawas.json
-      │                                 │
- history/                    history_pengawas/
-      │                                 │
-      └────────────────┬────────────────┘
-                       ▼
-                 processor.js
-                       │
-      ├── Process Enumerator
-      ├── Calculate Summary
-      ├── Build District
-      ├── Build Ranking
-      ├── Build Distribution
-      ├── Build Comparison
-      └── Dashboard Object
-                       │
-                       ▼
-                    app.js
-                       │
-       ┌───────────────┼───────────────┐
-       ▼               ▼               ▼
-   KPI Dashboard    Charts          Tables
-```
+### 📋 Tabel Rumus KPI (untuk kedua role)
 
----
+Semua angka dihitung **agregat nasional** = jumlah dari semua enumerator/pengawas × semua kecamatan.
 
-# ☁️ Supabase Storage
+| # | Card | Field JSON yang dihitung | Rumus | File |
+|---|------|-------------------------|-------|------|
+| 1 | **Assignment** | `user.total` per user | Σ user.total | `processor.js` `processEnumerator()` line ~517 |
+| 2 | **Open** | statusBreakdown = `"OPEN"` | Σ count status OPEN | `processor.js` `processRegion()` line 571 |
+| 3 | **Draft** | statusBreakdown = `"DRAFT"` | Σ count status DRAFT | `processor.js` line 573 |
+| 4 | **Submitted** | statusBreakdown = `"SUBMITTED BY Pencacah"` | Σ count | `processor.js` line 575 |
+| 5 | **Approved** | statusBreakdown = `"APPROVED BY Pengawas"` | Σ count | `processor.js` line 577 |
+| 6 | **Rejected** | statusBreakdown = `"REJECTED BY Pengawas"` | Σ count | `processor.js` line 579 |
+| 7 | **Revoke** | statusBreakdown = `"REVOKED BY Pengawas"` | Σ count | `processor.js` line 581 |
+| 8 | **Progress** | Beda per role (lihat #1 di atas) | PPL: 4+5+6+7/1 × 100<br>PML: 5/1 × 100 | `processor.js` `calculateSummary()` |
 
-Dashboard menggunakan **Supabase Storage** sebagai media penyimpanan seluruh file JSON.
+### 🎨 Perbedaan Card #4 & #8 Antar Role
 
-## Struktur Bucket
+Yang **berubah label dan/atau warna** per role:
 
-```text
-Bucket : data
+| Card | PPL (Pencacah) | PML (Pengawas) |
+|------|----------------|----------------|
+| **Submitted** (index #4) | Label: **"Submitted"** — dokumen yang sudah dikirim oleh pencacah. Warna normal. | Label: **"Backlog Approval"** — dokumen SUBMITTED yang **menunggu di-approve pengawas**. Warna 🟢🟡🔴 sesuai jumlah. |
+| **Progress** (index #8) | Label: **"Progress"** — % dokumen yang sudah masuk pipeline (submitted+approved+rejected+revoked). | Label: **"Progress Approve"** — % dokumen yang sudah **di-approve** (nilai lebih ketat). |
 
-latest.json
-latest_pengawas.json
+### 📁 Lokasi Semua Pengaturan
 
-history/
-    2026-07-01.json
-    2026-07-02.json
-    ...
-
-history_pengawas/
-    2026-07-01.json
-    2026-07-02.json
-    ...
-```
-
-## Keterangan
-
-| File | Fungsi |
-|------|--------|
-| latest.json | Data terbaru PPL |
-| latest_pengawas.json | Data terbaru PML |
-| history/*.json | Snapshot harian PPL |
-| history_pengawas/*.json | Snapshot harian PML |
+| Yang mau diubah | File | Fungsi / Baris |
+|-----------------|------|----------------|
+| Label card + backlog color rules | `js/app.js` | `KPI_CONFIG` (baris ~22-52) & `applyBacklogColor()` (~325) |
+| Threshold warna backlog (10/50) | `js/app.js` | `applyBacklogColor()` — ubah angka 10, 50 |
+| Rumus progress per role | `js/processor.js` | `calculateProgress()` & `calculateSummary()` |
+| Status yang dihitung ke Approved/Submitted | `js/processor.js` | `processRegion()` line 561-583 |
+| Card ikon + warna ikon | `index.php` | Array `$cards` line ~961-969 |
+| Threshold `roleName` deteksi upload | `api/history.php` | `detect_role_from_json()` line ~68 |
+| Judul ranking / tabel per role | `js/app.js` | `KPI_CONFIG.pencacah.rankingTitle` dsb. |
+| Path Supabase per role | `api/history.php` | `paths_for_role()` line ~51 |
+| Comparison card titles (Top 5 dll) | `js/comparison.js` | `renderComparison()` — patch di atas |
+| Judul "Perbandingan Harian" | `index.php` + `comparison.js` | Patch di atas |
 
 ---
-
-# ⚙️ Environment
-
-Konfigurasikan environment berikut.
-
-```env
-SUPABASE_URL=https://your-project.supabase.co
-SUPABASE_SERVICE_KEY=your-service-role-key
-SUPABASE_BUCKET=data
-```
-
----
-
-# 📥 Upload Data
-
-Upload dilakukan melalui
-
-```text
-api/history.php
-```
-
-Flow upload
-
-```text
-Upload JSON
-      │
-      ▼
-history.php
-      │
-      ▼
-Deteksi Role
-      │
-      ├─────────────┐
-      ▼             ▼
-    PPL            PML
-      │             │
-      ▼             ▼
- latest.json   latest_pengawas.json
-      │             │
-      ▼             ▼
- history/    history_pengawas/
-```
-
-Setiap upload akan:
-
-- Mengidentifikasi role otomatis
-- Menyimpan file terbaru
-- Membuat snapshot harian
-- Menyediakan data untuk Dashboard
-
----
-
-# ⚙️ Alur Pengolahan Data
-
-```text
-Raw JSON
-    │
-    ▼
-processor.js
-    │
-    ├── Process Enumerator
-    ├── Process Region
-    ├── Calculate Summary
-    ├── Calculate Progress
-    ├── Ranking
-    ├── Distribution
-    ├── Search Index
-    └── Dashboard Object
-              │
-              ▼
-app.js
-              │
-      ├── KPI
-      ├── Charts
-      ├── Tables
-      └── Comparison
-```
-
----
-
-# 📈 Perhitungan Progress
-
-Seluruh perhitungan utama dilakukan pada
-
-```text
-processor.js
-```
-
----
-
-## Status yang dihitung
-
-Dashboard menghitung seluruh status berikut.
-
-| Status | Keterangan |
-|---------|------------|
-| Assignment | Total Assignment |
-| Open | Belum dikerjakan |
-| Draft | Draft |
-| Submitted | Sudah dikirim |
-| Approved | Disetujui |
-| Edited | Diedit |
-| Rejected | Ditolak |
-| Revoked | Dicabut |
-
-Status **Edited** merupakan gabungan dari:
-
-- EDITED BY Pengawas
-- EDITED BY Admin Kabupaten
-
----
-
-# 👨‍💼 Progress PPL (Pencacah)
-
-Menggunakan field
-
-```text
-progressTotal
-```
-
-### Rumus
-
-```text
-Progress =
-(
-Submitted
-+ Approved
-+ Edited
-+ Rejected
-+ Revoked
-)
-/ Assignment × 100%
-```
-
-Status dianggap selesai apabila dokumen telah:
-
-- Submitted
-- Approved
-- Edited
-- Rejected
-- Revoked
-
----
-
-# 👨‍💼 Progress PML (Pengawas)
-
-Menggunakan field
-
-```text
-progressReview
-```
-
-### Rumus
-
-```text
-Progress =
-(
-Approved
-+ Edited
-+ Rejected
-+ Revoked
-)
-/ Assignment × 100%
-```
-
-Status **Submitted** belum dihitung karena masih menjadi backlog review.
-
----
-
-# 📊 Perhitungan Summary Dashboard
-
-Dilakukan pada
-
-```text
-processor.js
-```
-
-Summary Dashboard menghasilkan:
-
-- Assignment
-- Open
-- Draft
-- Submitted
-- Approved
-- Edited
-- Rejected
-- Revoked
-
-Kemudian dihitung:
-
-## Reviewed
-
-```text
-Reviewed =
-Approved
-+ Edited
-+ Rejected
-+ Revoked
-```
-
-## Completed
-
-```text
-Completed =
-Submitted
-+ Reviewed
-```
-
-## Progress Submit
-
-```text
-Submitted
-÷ Assignment ×100%
-```
-
-## Progress Approve
-
-```text
-Approved
-÷ Assignment ×100%
-```
-
-## Progress Review
-
-```text
-Reviewed
-÷ Assignment ×100%
-```
-
-## Progress Total
-
-```text
-Completed
-÷ Assignment ×100%
-```
-
-Summary tersebut digunakan pada:
-
-- KPI Dashboard
-- Progress Bar
-- Status Donut
-- Summary Cards
-
----
-
-# 🏆 Ranking Progress Petugas
-
-Perhitungan dilakukan pada
-
-```text
-processor.js
-charts.js
-```
-
-## PPL
-
-Menggunakan
-
-```text
-progressTotal
-```
-
-Menghasilkan:
-
-- Top 10 Progress
-- Bottom 10 Progress
-
----
-
-## PML
-
-Menggunakan
-
-```text
-progressReview
-```
-
-Menghasilkan:
-
-- Top 10 Progress
-- Bottom 10 Progress
-
----
-
-# 🗺️ Ranking Kecamatan
-
-Perhitungan dilakukan pada
-
-```text
-charts.js
-```
-
-Progress seluruh petugas dalam satu kecamatan dijumlahkan terlebih dahulu.
-
-Kemudian dihitung:
-
-### PPL
-
-```text
-progressTotal
-```
-
-### PML
-
-```text
-progressReview
-```
-
-Lalu dilakukan sorting dari progress tertinggi ke terendah.
-
-Visualisasi menggunakan Horizontal Bar Chart.
-
----
-
-# 📊 Distribution
-
-Dashboard mengelompokkan progress petugas menjadi beberapa kategori.
-
-```text
-0 – 20%
-
-20 – 40%
-
-40 – 60%
-
-60 – 80%
-
-80 – 100%
-```
-
-Digunakan untuk:
-
-- Progress Distribution Chart
-
----
-
-# 📅 Perbandingan Harian
-
-Perhitungan dilakukan pada
-
-```text
-comparison.js
-```
-
-Dashboard membandingkan
-
-```text
-Hari Ini
-
-vs
-
-Hari Sebelumnya
-```
-
-Snapshot diambil dari
-
-```text
-history/
-
-history_pengawas/
-```
-
----
-
-## Rumus Progress Harian PPL
-
-```text
-(
-Submitted
-+ Approved
-+ Edited
-+ Rejected
-+ Revoked
-)
-/ Assignment ×100%
-```
-
----
-
-## Rumus Progress Harian PML
-
-```text
-(
-Approved
-+ Edited
-+ Rejected
-+ Revoked
-)
-/ Assignment ×100%
-```
-
----
-
-## Delta Progress
-
-```text
-Progress Hari Ini
--
-Progress Hari Sebelumnya
-```
-
-Dashboard menghasilkan:
-
-- 🚀 Top Improvement
-- 📉 Lowest Improvement
-- 🏆 Top Progress
-- ⚠️ Bottom Progress
-
----
-
-# 📊 Dashboard Components
-
-## KPI
-
-- Assignment
-- Open
-- Draft
-- Submitted / Backlog Approval
-- Approved
-- Rejected
-- Revoked
-- Progress
-
----
-
-## Charts
-
-- Status Distribution
-- Ranking Progress
-- Ranking Kecamatan
-- Progress Distribution
-- Top Performer
-- Bottom Performer
-
----
-
-## Comparison
-
-- Top Progress
-- Bottom Progress
-- Top Improvement
-- Lowest Improvement
-
----
-
-## Tables
-
-### Ringkasan Petugas
-
-Menampilkan:
-
-- Username
-- Kecamatan
-- Assignment
-- Open
-- Draft
-- Submitted
-- Approved
-- Rejected
-- Revoked
-- Progress
-
----
-
-### Detail Kecamatan
-
-Menampilkan:
-
-- Username
-- Kecamatan
-- kdsubsls
-- Assignment
-- Open
-- Draft
-- Submitted
-- Approved
-- Rejected
-- Revoked
-- Progress
-
----
-
-# 🔄 Perbedaan PPL dan PML
-
-| Komponen | PPL | PML |
-|-----------|-----|------|
-| Progress | progressTotal | progressReview |
-| Submitted dihitung | ✅ Ya | ❌ Tidak |
-| Fokus | Penyelesaian Pencacahan | Penyelesaian Review |
-| Ranking | progressTotal | progressReview |
-| Daily Comparison | progressTotal | progressReview |
-| KPI Progress | Progress Total | Progress Review |
-
----
-
-# 🚀 Cara Menjalankan
-
-## 1. Clone Repository
-
-```bash
-git clone https://github.com/username/se2026-monitoring-center.git
-```
-
-## 2. Masuk ke Folder
-
-```bash
-cd se2026-monitoring-center
-```
-
-## 3. Konfigurasi Environment
-
-Tambahkan konfigurasi Supabase.
-
-## 4. Jalankan Server
-
-Contoh:
-
-- Apache
-- XAMPP
-- Laragon
-- Railway
-
-## 5. Upload JSON
-
-Buka Dashboard kemudian upload file JSON hasil export FASIH.
-
----
-
-# 📌 Catatan
-
-- Dashboard mendukung dua role (**PPL** dan **PML**).
-- Seluruh KPI, grafik, ranking, tabel, dan comparison akan berubah otomatis sesuai role yang dipilih.
-- Snapshot harian digunakan sebagai dasar perhitungan comparison.
-- Data disimpan di **Supabase Storage**, sehingga tidak memerlukan database relasional.
-- Dashboard menggunakan file JSON sebagai sumber data utama.

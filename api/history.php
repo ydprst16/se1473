@@ -1,4 +1,21 @@
 <?php
+// Mematikan output error HTML bawaan PHP
+ini_set('display_errors', 0);
+error_reporting(E_ALL);
+
+// Menangkap Fatal Error dan mengubahnya menjadi format JSON
+register_shutdown_function(function() {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'status' => 'error', 
+            'message' => 'PHP Fatal Error: ' . $err['message'] . ' in ' . basename($err['file']) . ' line ' . $err['line']
+        ]);
+        exit;
+    }
+});
 /*
 | SE Monitoring Center — api/history.php v4
 | - Support role: pencacah | pengawas
@@ -10,6 +27,7 @@
 if (file_exists(__DIR__ . '/config.local.php')) {
     require_once __DIR__ . '/config.local.php';
 }
+require_once __DIR__ . '/lib_security.php';   //
 
 date_default_timezone_set('Asia/Jakarta');
 header('Content-Type: application/json; charset=utf-8');
@@ -124,57 +142,114 @@ $role = normalize_role($_GET['role'] ?? $_POST['role'] ?? 'pencacah');
 $P = paths_for_role($role);
 
 try {
-    switch ($action) {
+        switch ($action) {
 
-        case 'upload-latest': {
-            if ($method !== 'POST')
-                throw new Exception('Method not allowed', 405);
-            if (!isset($_FILES['file']))
-                throw new Exception('File tidak ditemukan');
-            $content = file_get_contents($_FILES['file']['tmp_name']);
-            $decoded = json_decode($content, true);
-            if (!is_array($decoded))
-                throw new Exception('JSON tidak valid (harus Array).');
-            $detected = detect_role_from_json($decoded);
-            if ($detected === null)
-                throw new Exception('Tidak bisa deteksi role dari JSON.');
-            $usePath = paths_for_role($detected);
-            $r1 = sb_upload($usePath['latest'], $content);
-            if ($r1['status_code'] >= 400)
-                throw new Exception('Upload latest gagal: ' . $r1['body']);
-            $today = date('Y-m-d');
-            $r2 = sb_upload($usePath['history_dir'] . $today . '.json', $content);
-            if ($r2['status_code'] >= 400)
-                throw new Exception('Upload snapshot gagal: ' . $r2['body']);
-            echo json_encode([
-                'status' => 'ok',
-                'role' => $detected,
-                'date' => $today,
-                'message' => "Latest+snapshot tersimpan sebagai {$detected}"
-            ]);
-            break;
-        }
-
+        case 'upload-latest':
         case 'upload': {
             if ($method !== 'POST')
                 throw new Exception('Method not allowed', 405);
-            if (!isset($_FILES['file']))
-                throw new Exception('File tidak ditemukan');
-            $date = $_POST['date'] ?? '';
-            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date))
-                throw new Exception('Tanggal tidak valid.');
-            $content = file_get_contents($_FILES['file']['tmp_name']);
-            $decoded = json_decode($content, true);
-            if (!is_array($decoded))
-                throw new Exception('JSON tidak valid (harus Array).');
-            $detected = detect_role_from_json($decoded);
-            if ($detected === null)
-                throw new Exception('Tidak bisa deteksi role.');
-            $usePath = paths_for_role($detected);
-            $r = sb_upload($usePath['history_dir'] . $date . '.json', $content);
-            if ($r['status_code'] >= 400)
-                throw new Exception('Upload gagal: ' . $r['body']);
-            echo json_encode(['status' => 'ok', 'role' => $detected, 'date' => $date]);
+
+            $rawFilename = isset($_FILES['file']['name']) ? basename($_FILES['file']['name']) : null;
+            $safeFilename = $rawFilename ? preg_replace('/[^A-Za-z0-9._-]/', '_', $rawFilename) : null;
+            $sizeGuess = isset($_FILES['file']['size']) ? (int) $_FILES['file']['size'] : null;
+
+            // === Password guard ===
+            $password = $_POST['password'] ?? '';
+            $auth = sec_verify_upload_password($password);
+            if (!$auth['ok']) {
+                sec_audit_write([
+                    'action'   => 'login_failed',
+                    'filename' => $safeFilename,
+                    'size'     => $sizeGuess,
+                    'status'   => 'failed',
+                    'error'    => $auth['error'],
+                ]);
+                throw new Exception($auth['error'], $auth['code']);
+            }
+
+            try {
+                if (!isset($_FILES['file']))
+                    throw new Exception('File tidak ditemukan');
+                if (isset($_FILES['file']['error']) && $_FILES['file']['error'] !== UPLOAD_ERR_OK)
+                    throw new Exception('Upload error: ' . $_FILES['file']['error']);
+
+                // Batas ukuran
+                $maxBytes = MAX_FILE_SIZE_MB * 1024 * 1024;
+                if ($sizeGuess !== null && $sizeGuess > $maxBytes)
+                    throw new Exception('Ukuran file melebihi ' . MAX_FILE_SIZE_MB . ' MB');
+
+                // Ekstensi
+                if ($safeFilename && !preg_match('/\.json$/i', $safeFilename))
+                    throw new Exception('Ekstensi harus .json');
+
+                $content = file_get_contents($_FILES['file']['tmp_name']);
+                if ($content === false || $content === '')
+                    throw new Exception('File kosong.');
+                if (strlen($content) > $maxBytes)
+                    throw new Exception('Ukuran file melebihi ' . MAX_FILE_SIZE_MB . ' MB');
+
+                $decoded = json_decode($content, true);
+                if (!is_array($decoded))
+                    throw new Exception('JSON tidak valid (harus Array).');
+
+                $detected = detect_role_from_json($decoded);
+                if ($detected === null)
+                    throw new Exception('Tidak bisa deteksi role dari JSON.');
+                $usePath = paths_for_role($detected);
+
+                if ($action === 'upload-latest') {
+                    $today = date('Y-m-d');
+                    $r1 = sb_upload($usePath['latest'], $content);
+                    if ($r1['status_code'] >= 400)
+                        throw new Exception('Upload latest gagal: ' . $r1['body']);
+                    $r2 = sb_upload($usePath['history_dir'] . $today . '.json', $content);
+                    if ($r2['status_code'] >= 400)
+                        throw new Exception('Upload snapshot gagal: ' . $r2['body']);
+                    $usedDate = $today;
+                    $okPayload = [
+                        'status'        => 'ok',
+                        'role'          => $detected,
+                        'detected_role' => $detected,
+                        'date'          => $today,
+                        'message'       => "Latest+snapshot tersimpan sebagai {$detected}"
+                    ];
+                } else {
+                    $date = $_POST['date'] ?? '';
+                    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date))
+                        throw new Exception('Tanggal tidak valid.');
+                    $r = sb_upload($usePath['history_dir'] . $date . '.json', $content);
+                    if ($r['status_code'] >= 400)
+                        throw new Exception('Upload gagal: ' . $r['body']);
+                    $usedDate = $date;
+                    $okPayload = [
+                        'status'        => 'ok',
+                        'role'          => $detected,
+                        'detected_role' => $detected,
+                        'date'          => $date,
+                    ];
+                }
+
+                sec_audit_write([
+                    'action'   => 'upload_success',
+                    'filename' => $safeFilename,
+                    'role'     => $detected,
+                    'date'     => $usedDate,
+                    'size'     => strlen($content),
+                    'status'   => 'success',
+                    'error'    => null,
+                ]);
+
+                echo json_encode($okPayload);
+            } catch (Exception $ex) {
+                sec_audit_write([
+                    'action'   => 'upload_failed',
+                    'filename' => $safeFilename,
+                    'size'     => $sizeGuess,
+                    'status'   => 'failed',
+                    'error'    => $ex->getMessage(),
+                ]);
+                throw $ex;
+            }
             break;
         }
 

@@ -1,10 +1,10 @@
 /*
 | SE Monitoring Center — app.js v5 (Pencacah + Pengawas)
 | PERUBAHAN v5:
-|   - Role Pengawas sekarang pakai progressReview
-|     (Approved + Edited + Rejected + Revoked) / Assignment
-|   - KPI card "Progress Approve" -> "Progress Review"
-|   - Comparison (kemarin vs hari ini) ikut pakai progressReview
+|    - Role Pengawas sekarang pakai progressReview
+|      (Approved + Edited + Rejected + Revoked) / Assignment
+|    - KPI card "Progress Approve" -> "Progress Review"
+|    - Comparison (kemarin vs hari ini) ikut pakai progressReview
 */
 
 document.addEventListener("DOMContentLoaded", init);
@@ -167,7 +167,26 @@ async function renderAll() {
   if (typeof renderComparison === "function") renderComparison();
 }
 
+function applySavedTheme() {
+  const html = document.documentElement;
+  let theme = localStorage.getItem("theme");
+  if (!theme) {
+    const prefersDark = window.matchMedia
+      && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    theme = prefersDark ? "dark" : "light";
+  }
+  html.setAttribute("data-bs-theme", theme);
+
+  const btn = document.getElementById("btnDarkMode");
+  if (btn) {
+    btn.innerHTML = theme === "dark"
+      ? `<i class="bi bi-moon"></i>`
+      : `<i class="bi bi-sun"></i>`;
+  }
+}
+
 async function init() {
+  applySavedTheme();
   bindEvents();
   applyRoleUI();
   try {
@@ -432,8 +451,6 @@ function bindEvents() {
   });
 
   const viewDateEl = document.getElementById("viewDate");
-  // Handler pemilihan tanggal ditangani oleh Flatpickr onChange
-  // di populateViewDateOptions(), jadi tidak perlu addEventListener di sini.
 
   const btnViewLatest = document.getElementById("btnViewLatest");
   if (btnViewLatest)
@@ -471,108 +488,36 @@ function bindEvents() {
   const btnOpen = document.getElementById("btnOpenUpload");
   if (btnOpen)
     btnOpen.addEventListener("click", async () => {
-      const fileInput = document.getElementById("jsonFile");
-      const dateInput = document.getElementById("jsonDate");
-      if (fileInput) fileInput.value = "";
-      if (dateInput) dateInput.value = todayYMD();
-      await refreshSnapshotList();
+      resetUploadModal();
       new bootstrap.Modal(document.getElementById("uploadModal")).show();
     });
 
-  const fileInputChange = document.getElementById("jsonFile");
-  if (fileInputChange)
-    fileInputChange.addEventListener("change", () => {
-      const f = fileInputChange.files && fileInputChange.files[0];
-      if (!f) return;
-      const m = f.name.match(/(\d{4}-\d{2}-\d{2})/);
-      if (m) {
-        const dateInput = document.getElementById("jsonDate");
-        if (dateInput) dateInput.value = m[1];
-      }
-    });
-
-  const btnUpload = document.getElementById("btnUpload");
-  if (btnUpload)
-    btnUpload.addEventListener("click", async () => {
-      const fileInput = document.getElementById("jsonFile");
-      const dateInput = document.getElementById("jsonDate");
-      const file = fileInput && fileInput.files && fileInput.files[0];
-      if (!file) {
-        Swal.fire({ icon: "warning", title: "File belum dipilih", text: "Pilih file .json dulu" });
-        return;
-      }
-      if (!/\.json$/i.test(file.name)) {
-        Swal.fire({ icon: "warning", title: "Format salah", text: "File harus .json" });
-        return;
-      }
-
-      const pickedDate = (dateInput && dateInput.value) || todayYMD();
-      const today = todayYMD();
-      const isToday = pickedDate === today;
-      if (pickedDate > today) {
-        Swal.fire({ icon: "warning", title: "Tanggal tidak valid", text: "Tidak boleh masa depan." });
-        return;
-      }
-
-      try {
-        btnUpload.disabled = true;
-        btnUpload.innerHTML = "Mengunggah...";
-        let result;
-        if (isToday) {
-          const fd = new FormData();
-          fd.append("file", file);
-          const res = await fetch("api/history.php?action=upload-latest", { method: "POST", body: fd });
-          result = await res.json();
-          if (!res.ok || result.status !== "ok") throw new Error(result.message || `HTTP ${res.status}`);
-        } else {
-          const fd = new FormData();
-          fd.append("file", file);
-          fd.append("date", pickedDate);
-          const res = await fetch("api/history.php?action=upload", { method: "POST", body: fd });
-          result = await res.json();
-          if (!res.ok || result.status !== "ok") throw new Error(result.message || `HTTP ${res.status}`);
-        }
-
-        const detectedRole = result.role || currentRole;
-        const modalEl = document.getElementById("uploadModal");
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        if (modal) modal.hide();
-
-        showLoading();
-        if (detectedRole !== currentRole) currentRole = detectedRole;
-        if (isToday) {
-          viewedDate = null;
-          if (viewDateFp) viewDateFp.clear(false);
-          else {
-            const vde = document.getElementById("viewDate");
-            if (vde) vde.value = "";
-          }
-        }
-        applyRoleUI();
-        await loadByDate(viewedDate);
-        await populateViewDateOptions();
-        await renderAll();
-        hideLoading();
-        toast("success", isToday
-          ? `Upload sukses — ${detectedRole} hari ini (${pickedDate})`
-          : `Snapshot ${detectedRole} ${pickedDate} tersimpan`);
-      } catch (err) {
-        Swal.fire({ icon: "error", title: "Upload Gagal", text: err.message });
-      } finally {
-        btnUpload.disabled = false;
-        btnUpload.innerHTML = "Upload";
-      }
-    });
+  bindMultiUpload();
 
   const btnDark = document.getElementById("btnDarkMode");
-  if (btnDark)
+  if (btnDark) {
     btnDark.addEventListener("click", () => {
       const html = document.documentElement;
-      const cur = html.getAttribute("data-bs-theme") || "dark";
+      const cur  = html.getAttribute("data-bs-theme") || "dark";
       const next = cur === "dark" ? "light" : "dark";
+
       html.setAttribute("data-bs-theme", next);
-      btnDark.innerHTML = next === "dark" ? `<i class="fa fa-moon"></i>` : `<i class="fa fa-sun"></i>`;
+      localStorage.setItem("theme", next);
+
+      btnDark.innerHTML = next === "dark"
+        ? `<i class="bi bi-moon"></i>`
+        : `<i class="bi bi-sun"></i>`;
+
+      // >>> Sync semua chart ApexCharts ikut tema
+      if (typeof window.onThemeChanged === "function") {
+        window.onThemeChanged();
+      }
+
+      // >>> Sync Tabulator theme (opsional, kalau kamu simpan instance-nya)
+      if (typeof gridTable !== "undefined" && gridTable && gridTable.redraw)      gridTable.redraw(true);
+      if (typeof gridDetail !== "undefined" && gridDetail && gridDetail.redraw)   gridDetail.redraw(true);
     });
+  }
 
   const btnFs = document.getElementById("btnFullscreen");
   if (btnFs)
@@ -609,3 +554,371 @@ async function refreshSnapshotList() {
   } catch { el.textContent = "(gagal memuat)"; }
 }
 
+/* =========================================================================
+ * MULTI-FILE UPLOAD (v6)
+ * - Drag & drop, multiple files
+ * - Client-side JSON parse untuk preview role & tanggal
+ * - Queue paralel (max 3 concurrent), progress per item
+ * - Password upload divalidasi backend (bcrypt + rate limit)
+ * ========================================================================= */
+
+const MAX_BATCH = 20;
+const MAX_FILE_MB = 10;
+const CONCURRENCY = 3;
+
+/** state uploader */
+const uploader = {
+  items: [], // {id, file, name, size, role, date, isToday, status, progress, error, response}
+  running: 0,
+};
+
+function detectRoleFromDecoded(decoded) {
+  if (!Array.isArray(decoded) || !decoded.length) return null;
+  const first = decoded[0];
+  if (!first || typeof first !== "object") return null;
+  if ("isPencacah" in first) return first.isPencacah === true ? "pencacah" : "pengawas";
+  if (first.roleName) {
+    const rn = String(first.roleName).toLowerCase();
+    if (rn.includes("pengawas")) return "pengawas";
+    if (rn.includes("pencacah")) return "pencacah";
+  }
+  return null;
+}
+
+function extractDateFromName(name) {
+  const m = String(name || "").match(/(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : null;
+}
+
+function bytesFmt(b) {
+  if (b == null) return "";
+  if (b < 1024) return `${b} B`;
+  if (b < 1024 * 1024) return `${(b/1024).toFixed(1)} KB`;
+  return `${(b/1024/1024).toFixed(2)} MB`;
+}
+
+function resetUploadModal() {
+  uploader.items = [];
+  uploader.running = 0;
+  const list = document.getElementById("fileList");
+  if (list) list.innerHTML = "";
+  const cnt = document.getElementById("uploadCount");
+  if (cnt) cnt.textContent = "0";
+  const pw = document.getElementById("uploadPassword");
+  if (pw) pw.value = "";
+  const fi = document.getElementById("jsonFile");
+  if (fi) fi.value = "";
+  const btn = document.getElementById("btnUpload");
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> Upload Semua'; }
+  const dz = document.getElementById("dropZone");
+  if (dz) dz.classList.remove("is-dragover");
+}
+
+function renderFileItem(it) {
+  const badges = [];
+  if (it.role === "pencacah") badges.push('<span class="fi-badge fi-badge-pencacah">pencacah</span>');
+  else if (it.role === "pengawas") badges.push('<span class="fi-badge fi-badge-pengawas">pengawas</span>');
+  else badges.push('<span class="fi-badge fi-badge-unknown">unknown</span>');
+  if (it.date) badges.push(`<span class="fi-badge fi-badge-date">${it.date}${it.isToday ? " · hari ini" : ""}</span>`);
+  if (it.error && it.status === "invalid") badges.push(`<span class="fi-badge fi-badge-error">${escHtml(it.error)}</span>`);
+  badges.push(`<span class="text-secondary">${bytesFmt(it.size)}</span>`);
+
+  const statusIcon = {
+    queued:    '<i class="bi bi-hourglass-split text-secondary" title="queued"></i>',
+    uploading: '<span class="spinner-border spinner-border-sm text-primary" role="status" title="uploading"></span>',
+    success:   '<i class="bi bi-check-circle-fill text-success" title="success"></i>',
+    failed:    '<i class="bi bi-x-circle-fill text-danger" title="failed"></i>',
+    invalid:   '<i class="bi bi-exclamation-triangle-fill text-warning" title="invalid"></i>',
+  }[it.status] || "";
+
+  const removeBtn = (it.status === "queued" || it.status === "invalid")
+    ? `<button type="button" class="fi-remove" data-remove="${it.id}" title="Hapus" data-testid="upload-remove-${it.id}">
+         <i class="bi bi-x-lg"></i>
+       </button>` : "";
+
+  const progWidth = it.status === "success" ? 100 : (it.progress || 0);
+  const progColor = it.status === "failed" ? "background: linear-gradient(90deg,#ef4444,#f97316);" : "";
+  const errRow = (it.error && (it.status === "failed" || it.status === "invalid"))
+    ? `<div class="fi-error-msg"><i class="bi bi-exclamation-circle"></i> ${escHtml(it.error)}</div>` : "";
+
+  return `
+    <div class="file-item" data-fileitem="${it.id}">
+      <div class="fi-status">${statusIcon}</div>
+      <div class="fi-name" title="${escHtml(it.name)}">${escHtml(it.name)}</div>
+      <div class="fi-actions">${removeBtn}</div>
+      <div class="fi-meta">${badges.join("")}</div>
+      <div class="fi-progress"><div class="fi-progress-bar" style="width:${progWidth}%;${progColor}"></div></div>
+      ${errRow}
+    </div>`;
+}
+
+function escHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function refreshFileList() {
+  const list = document.getElementById("fileList");
+  if (!list) return;
+  list.innerHTML = uploader.items.map(renderFileItem).join("");
+  list.querySelectorAll("[data-remove]").forEach(btn => {
+    btn.addEventListener("click", () => removeItem(btn.dataset.remove));
+  });
+  const cnt = document.getElementById("uploadCount");
+  if (cnt) cnt.textContent = String(uploader.items.length);
+}
+
+function removeItem(id) {
+  const idx = uploader.items.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  const it = uploader.items[idx];
+  if (it.status === "uploading") return;
+  uploader.items.splice(idx, 1);
+  refreshFileList();
+}
+
+async function readAndAnalyseFile(file) {
+  return new Promise((resolve) => {
+    const item = {
+      id: "f" + Math.random().toString(36).slice(2, 9),
+      file, name: file.name, size: file.size,
+      role: null, date: null, isToday: false,
+      status: "queued", progress: 0, error: null, response: null,
+    };
+    if (!/\.json$/i.test(file.name)) {
+      item.status = "invalid"; item.error = "Ekstensi harus .json"; return resolve(item);
+    }
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      item.status = "invalid"; item.error = `Melebihi ${MAX_FILE_MB} MB`; return resolve(item);
+    }
+    const fr = new FileReader();
+    fr.onload = () => {
+      try {
+        const text = String(fr.result || "");
+        if (!text.trim()) { item.status = "invalid"; item.error = "File kosong."; return resolve(item); }
+        const j = JSON.parse(text);
+        if (!Array.isArray(j)) { item.status = "invalid"; item.error = "JSON harus Array."; return resolve(item); }
+        item.role = detectRoleFromDecoded(j);
+        if (!item.role) { item.status = "invalid"; item.error = "Role tidak terdeteksi."; return resolve(item); }
+        item.date = extractDateFromName(file.name) || todayYMD();
+        const today = todayYMD();
+        if (item.date > today) { item.status = "invalid"; item.error = "Tanggal masa depan."; return resolve(item); }
+        item.isToday = (item.date === today);
+        resolve(item);
+      } catch (e) {
+        item.status = "invalid"; item.error = "JSON tidak valid: " + (e.message || e);
+        resolve(item);
+      }
+    };
+    fr.onerror = () => { item.status = "invalid"; item.error = "Gagal baca file."; resolve(item); };
+    fr.readAsText(file);
+  });
+}
+
+async function addFiles(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  const remainingSlot = MAX_BATCH - uploader.items.length;
+  if (remainingSlot <= 0) {
+    Swal.fire({ icon: "warning", title: `Batas ${MAX_BATCH} file`, text: `Antrian penuh. Hapus beberapa file dulu.` });
+    return;
+  }
+  const toAdd = files.slice(0, remainingSlot);
+  if (files.length > remainingSlot) {
+    Swal.fire({ icon: "info", title: "Sebagian file di-skip", text: `Hanya ${remainingSlot} dari ${files.length} yang ditambahkan (max ${MAX_BATCH}/batch).` });
+  }
+  const analysed = await Promise.all(toAdd.map(readAndAnalyseFile));
+  uploader.items.push(...analysed);
+  refreshFileList();
+}
+
+function uploadSingle(item, password) {
+  return new Promise((resolve) => {
+    item.status = "uploading"; item.progress = 0; item.error = null;
+    refreshFileList();
+    const fd = new FormData();
+    fd.append("file", item.file);
+    fd.append("password", password);
+    const action = item.isToday ? "upload-latest" : "upload";
+    if (!item.isToday) fd.append("date", item.date);
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "api/history.php?action=" + action);
+    xhr.upload.onprogress = (ev) => {
+      if (ev.lengthComputable) {
+        item.progress = Math.round((ev.loaded / ev.total) * 95); // 95% saat upload, sisanya proses server
+        refreshFileList();
+      }
+    };
+    xhr.onload = () => {
+      let j = null;
+      try { j = JSON.parse(xhr.responseText); } catch { /* ignore */ }
+      if (xhr.status >= 200 && xhr.status < 300 && j && j.status === "ok") {
+        item.status = "success"; item.progress = 100; item.response = j;
+        if (j.role && j.role !== item.role) item.role = j.role;
+        refreshFileList();
+        resolve({ ok: true });
+      } else {
+        item.status = "failed";
+        item.error = (j && j.message) ? j.message : `HTTP ${xhr.status}`;
+        refreshFileList();
+        resolve({ ok: false, code: xhr.status, error: item.error });
+      }
+    };
+    xhr.onerror = () => {
+      item.status = "failed"; item.error = "Network error.";
+      refreshFileList();
+      resolve({ ok: false, error: item.error });
+    };
+    xhr.send(fd);
+  });
+}
+
+async function processQueue(password) {
+  const queue = uploader.items.filter(it => it.status === "queued");
+  let idx = 0;
+  const workers = new Array(Math.min(CONCURRENCY, queue.length)).fill(0).map(async () => {
+    while (idx < queue.length) {
+      const my = queue[idx++];
+      await uploadSingle(my, password);
+    }
+  });
+  await Promise.all(workers);
+}
+
+function bindMultiUpload() {
+  const dz = document.getElementById("dropZone");
+  const fi = document.getElementById("jsonFile");
+  const pickBtn = document.getElementById("btnPickFiles");
+  const pwToggle = document.getElementById("btnTogglePw");
+  const btnUpload = document.getElementById("btnUpload");
+  if (!dz || !fi) return;
+
+  // Klik area drop → buka file dialog (kecuali klik tombol pilih file)
+  dz.addEventListener("click", (e) => {
+    if (e.target.closest("#btnPickFiles")) return;
+    fi.click();
+  });
+  if (pickBtn) pickBtn.addEventListener("click", (e) => { e.stopPropagation(); fi.click(); });
+
+  fi.addEventListener("change", (e) => { addFiles(e.target.files); fi.value = ""; });
+
+  ["dragenter", "dragover"].forEach(ev => dz.addEventListener(ev, (e) => {
+    e.preventDefault(); e.stopPropagation();
+    dz.classList.add("is-dragover");
+  }));
+  ["dragleave", "drop"].forEach(ev => dz.addEventListener(ev, (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (ev === "dragleave" && dz.contains(e.relatedTarget)) return;
+    dz.classList.remove("is-dragover");
+  }));
+  dz.addEventListener("drop", (e) => {
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if (files && files.length) addFiles(files);
+  });
+
+  if (pwToggle) pwToggle.addEventListener("click", () => {
+    const inp = document.getElementById("uploadPassword");
+    if (!inp) return;
+    inp.type = inp.type === "password" ? "text" : "password";
+    const ic = pwToggle.querySelector("i");
+    if (ic) ic.className = inp.type === "password" ? "bi bi-eye" : "bi bi-eye-slash";
+  });
+
+  if (btnUpload) btnUpload.addEventListener("click", handleUploadAll);
+}
+
+async function handleUploadAll() {
+  const btn = document.getElementById("btnUpload");
+  const pwEl = document.getElementById("uploadPassword");
+  const password = pwEl ? pwEl.value : "";
+  const uploadable = uploader.items.filter(it => it.status === "queued");
+
+  if (!uploadable.length) {
+    Swal.fire({ icon: "warning", title: "Tidak ada file valid", text: "Pilih file .json dulu." });
+    return;
+  }
+  if (!password) {
+    Swal.fire({ icon: "warning", title: "Password kosong", text: "Masukkan password upload." });
+    pwEl && pwEl.focus();
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Mengunggah...';
+
+  await processQueue(password);
+
+  const done = uploader.items.filter(it => it.status === "success");
+  const fail = uploader.items.filter(it => it.status === "failed");
+  const skipped = uploader.items.filter(it => it.status === "invalid");
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="bi bi-cloud-arrow-up"></i> Upload Semua';
+
+  // Deteksi rate limit / password salah
+  const wrongPw = fail.find(x => (x.error || "").toLowerCase().includes("password"));
+  const rateLim = fail.find(x => (x.error || "").toLowerCase().includes("percobaan") || (x.error || "").toLowerCase().includes("rate"));
+
+  if (wrongPw && done.length === 0) {
+    Swal.fire({ icon: "error", title: "Password salah", text: wrongPw.error });
+    pwEl && pwEl.focus();
+    return;
+  }
+  if (rateLim && done.length === 0) {
+    Swal.fire({ icon: "error", title: "Terlalu banyak percobaan", text: rateLim.error });
+    return;
+  }
+
+  // Refresh dashboard jika ada yang sukses
+  if (done.length) {
+    // Pilih role paling sering muncul di batch sukses untuk switch tampilan
+    const roleCount = {};
+    done.forEach(x => { const r = (x.response && x.response.role) || x.role; if (r) roleCount[r] = (roleCount[r]||0)+1; });
+    const dominantRole = Object.keys(roleCount).sort((a,b) => roleCount[b]-roleCount[a])[0] || currentRole;
+    const hasTodayUpload = done.some(x => x.isToday);
+
+    if (dominantRole !== currentRole) currentRole = dominantRole;
+    if (hasTodayUpload) {
+      viewedDate = null;
+      if (viewDateFp) viewDateFp.clear(false);
+      else {
+        const vde = document.getElementById("viewDate");
+        if (vde) vde.value = "";
+      }
+    }
+
+    try {
+      showLoading();
+      applyRoleUI();
+      await loadByDate(viewedDate);
+      await populateViewDateOptions();
+      await renderAll();
+      hideLoading();
+    } catch (e) {
+      hideLoading();
+    }
+  }
+
+  // Summary alert
+  const html = `
+    <div class="text-start" style="font-size:0.9rem">
+      <div><i class="bi bi-check-circle-fill text-success"></i> Sukses: <b>${done.length}</b></div>
+      <div><i class="bi bi-x-circle-fill text-danger"></i> Gagal: <b>${fail.length}</b></div>
+      ${skipped.length ? `<div><i class="bi bi-exclamation-triangle-fill text-warning"></i> Invalid (skip): <b>${skipped.length}</b></div>` : ""}
+    </div>`;
+  Swal.fire({
+    icon: fail.length && !done.length ? "error" : (fail.length ? "warning" : "success"),
+    title: fail.length && !done.length ? "Semua upload gagal"
+          : fail.length ? "Upload sebagian sukses"
+          : "Upload berhasil",
+    html,
+    confirmButtonText: "OK",
+  }).then(() => {
+    if (done.length && !fail.length && !skipped.length) {
+      const modalEl = document.getElementById("uploadModal");
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+      resetUploadModal();
+    }
+  });
+}
