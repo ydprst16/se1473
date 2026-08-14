@@ -379,7 +379,7 @@ function processRegion(region) {
   const editedPengawas = getStatusCount(region.statusBreakdown, "EDITED BY Pengawas");
 
   return {
-    kdsubsls: String(region.regionCode),
+    idsubsls: String(region.regionCode),
     regionCode: Number(String(region.regionCode).substring(0, 7)),
     assignment: safeNumber(region.total),
     open: getStatusCount(region.statusBreakdown, "OPEN"),
