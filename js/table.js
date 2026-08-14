@@ -188,10 +188,11 @@ function renderTableDetail() {
   Dashboard.enumerators.forEach((e) => {
     e.regions.forEach((r) => {
       const currentId = r.idsubsls || String(r.regionCode);
-      
-      // Mengambil nama kelurahan & SLS dari SUBSLS_MAP berdasarkan IDSubSLS 16-digit
-      // Fallback ke string "-" jika idsubsls tidak ditemukan di master
       const ref = SUBSLS_MAP[currentId] || { nmdesa: "-", nmsls: "-" };
+
+      // --- MENCEGAH ADA ENTER DI DATA EXCEL ---
+      // Jika ada baris baru (enter), akan diubah jadi 1 spasi horizontal
+      const namaSlsBersih = (ref.nmsls || "-").replace(/\s+/g, ' ').trim();
 
       detailData.push({
         no: no++,
@@ -199,11 +200,9 @@ function renderTableDetail() {
         idsubsls: currentId,
         kecamatan: REGION_MAP[r.regionCode] || String(r.regionCode),
         
-        // --- Kolom Baru ---
         kelurahan: ref.nmdesa,
-        nmsls: ref.nmsls,
-        // ------------------
-
+        nmsls: namaSlsBersih, // Menggunakan data yang sudah dibersihkan
+        
         assignment: r.assignment || 0,
         open: r.open || 0,
         draft: r.draft || 0,
@@ -223,7 +222,7 @@ function renderTableDetail() {
 
   tableDetail = new Tabulator("#gridTableDetail", {
     data: detailData,
-    layout: "fitColumns", // Kolom menyesuaikan lebar sisa tabel
+    layout: "fitColumns",
     responsiveLayout: false,
     height: "650px",
     movableColumns: true,
@@ -238,23 +237,34 @@ function renderTableDetail() {
       { title: "IDSubSLS", field: "idsubsls", minWidth: 150, widthGrow: 1, hozAlign: "center", headerFilter: "input" },
       { title: "Kecamatan", field: "kecamatan", minWidth: 130, widthGrow: 2, headerFilter: "input" },
       
-      // --- Definisi Kolom Baru di Tabulator ---
       { 
         title: "Kelurahan", 
         field: "kelurahan", 
         minWidth: 180, 
         widthGrow: 3, 
         headerFilter: "input",
-        formatter: "textarea" // Teks akan dibungkus (wrap) ke bawah jika kepanjangan
+        formatter: "textarea" 
       },
+      
+      // --- PERBAIKAN KOLOM NAMA SLS SATU BARIS ---
       { 
         title: "Nama SLS", 
         field: "nmsls", 
-        minWidth: 90, 
+        minWidth: 100, // Sedikit diperbesar dari 90 agar judul muat di satu baris
         widthGrow: 1, 
-        headerFilter: "input" 
+        headerFilter: "input",
+        
+        // Memaksa judul tidak turun baris, membypass CSS global
+        titleFormatter: function(cell) {
+            return `<div style="white-space: nowrap;">Nama SLS</div>`;
+        },
+
+        // Memaksa isi cell (data) menjadi 1 baris saja
+        formatter: function(cell) {
+          return `<div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${cell.getValue()}</div>`;
+        }
       },
-      // ----------------------------------------
+      // -------------------------------------------
 
       { title: "Assignment", field: "assignment", hozAlign: "right", headerHozAlign: "center", width: 100 },
       ...statusColumns(),
