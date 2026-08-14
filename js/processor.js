@@ -14,9 +14,14 @@
 |   3. progressTotal (Pencacah) sekarang juga memperhitungkan edited.
 |   4. buildRankings & buildDistribution sekarang role-aware
 |      (memakai currentRole global dari app.js).
+| PERUBAHAN v3:
+| 1. "EDITED BY Admin Kabupaten" -> field editedAdmin
+|    "EDITED BY Pengawas"        -> field editedPengawas
+| 2. Field gabungan "edited" TETAP ada (= editedAdmin + editedPengawas)
+|    dipakai oleh progressReview, buildStatus (charts), dan app.js.
+| 3. + bucket submittedRespondent ("SUBMITTED RESPONDENT").
 |--------------------------------------------------------------------------
 */
-
 const Dashboard = {
   raw: [],
 
@@ -25,17 +30,20 @@ const Dashboard = {
     open: 0,
     draft: 0,
     submitted: 0,
+    submittedRespondent: 0,
     approved: 0,
-    edited: 0,          // NEW
+    editedAdmin: 0,     // NEW
+    editedPengawas: 0,  // NEW
+    edited: 0,          // = editedAdmin + editedPengawas
     rejected: 0,
     revoked: 0,
-    reviewed: 0,        // NEW  = approved + edited + rejected + revoked
-    completed: 0,       // = submitted + reviewed
+    reviewed: 0,        // = approved + edited + rejected + revoked
+    completed: 0,       // = submitted + submittedRespondent + reviewed
     remaining: 0,
     progressSubmit: 0,
     progressApprove: 0,
-    progressReview: 0,  // NEW — dipakai role Pengawas
-    progressTotal: 0,   // dipakai role Pencacah
+    progressReview: 0,  // Pengawas
+    progressTotal: 0,   // Pencacah
   },
 
   enumerators: [],
@@ -46,7 +54,7 @@ const Dashboard = {
     bottomProgress: [],
     topSubmit: [],
     topApprove: [],
-    topReview: [],       // NEW — ranking Pengawas
+    topReview: [],
     topAssignment: [],
   },
 
@@ -63,7 +71,7 @@ const Dashboard = {
     loadedAt: null,
     totalEnumerator: 0,
     totalDistrict: 0,
-    version: "2.0.0",
+    version: "4.0.0",
   },
 };
 
@@ -71,11 +79,12 @@ const STATUS_MAP = {
   OPEN: "open",
   DRAFT: "draft",
   "SUBMITTED BY Pencacah": "submitted",
+  "SUBMITTED RESPONDENT": "submittedRespondent",
   "APPROVED BY Pengawas": "approved",
   "REJECTED BY Pengawas": "rejected",
   "REVOKED BY Pengawas": "revoked",
-  "EDITED BY Admin Kabupaten": "edited", // NEW
-  "EDITED BY Pengawas": "edited",        // NEW
+  "EDITED BY Admin Kabupaten": "editedAdmin",   // NEW (dipisah)
+  "EDITED BY Pengawas": "editedPengawas",        // NEW (dipisah)
 };
 
 const PROGRESS_BUCKETS = ["0-20", "20-40", "40-60", "60-80", "80-100"];
@@ -144,8 +153,9 @@ async function loadDashboard(jsonFile = "data/latest.json") {
  |========================================================================== */
 function resetDashboard() {
   Dashboard.summary = {
-    assignment: 0, open: 0, draft: 0, submitted: 0,
-    approved: 0, edited: 0, rejected: 0, revoked: 0,
+    assignment: 0, open: 0, draft: 0, submitted: 0, submittedRespondent: 0,
+    approved: 0, editedAdmin: 0, editedPengawas: 0, edited: 0,
+    rejected: 0, revoked: 0,
     reviewed: 0, completed: 0, remaining: 0,
     progressSubmit: 0, progressApprove: 0, progressReview: 0, progressTotal: 0,
   };
@@ -233,16 +243,16 @@ function buildDistribution() {
 
   Dashboard.enumerators.forEach((item) => {
     const p = pickProgress(item);
-    if (p < 20)      Dashboard.distribution["0-20"]++;
+    if (p < 20) Dashboard.distribution["0-20"]++;
     else if (p < 40) Dashboard.distribution["20-40"]++;
     else if (p < 60) Dashboard.distribution["40-60"]++;
     else if (p < 80) Dashboard.distribution["60-80"]++;
-    else             Dashboard.distribution["80-100"]++;
+    else Dashboard.distribution["80-100"]++;
   });
 }
 
 /* ==========================================================================
- | Build Status Dataset (7 kolom)
+ | Build Status Dataset (7 kolom untuk charts — pakai edited GABUNGAN)
  | Urutan: open, draft, submitted, approved, edited, rejected, revoked
  |========================================================================== */
 function buildStatus() {
@@ -277,15 +287,27 @@ function buildSearchIndex() {
 }
 
 /* ==========================================================================
- | Validate
+ | Validate (HARDENED)
  |========================================================================== */
 function validateData() {
   Dashboard.enumerators.forEach((item) => {
-    if (item.assignment <= 0)             console.warn(`[${item.username}] Assignment = 0`);
-    if (item.approved  > item.assignment) console.warn(`[${item.username}] Approved melebihi Assignment`);
+    if (item.assignment <= 0) console.warn(`[${item.username}] Assignment = 0`);
+    if (item.approved > item.assignment) console.warn(`[${item.username}] Approved melebihi Assignment`);
     if (item.submitted > item.assignment) console.warn(`[${item.username}] Submitted melebihi Assignment`);
-    if (item.edited    > item.assignment) console.warn(`[${item.username}] Edited melebihi Assignment`);
-    if (item.reviewed  > item.assignment) console.warn(`[${item.username}] Reviewed melebihi Assignment`);
+    if (item.edited > item.assignment) console.warn(`[${item.username}] Edited melebihi Assignment`);
+    if (item.reviewed > item.assignment) console.warn(`[${item.username}] Reviewed melebihi Assignment`);
+
+    // Jumlah semua bucket harus == assignment (deteksi status belum di-mapping)
+    const bucketSum =
+      item.open + item.draft + item.submitted + item.submittedRespondent +
+      item.approved + item.editedAdmin + item.editedPengawas +
+      item.rejected + item.revoked;
+    if (bucketSum !== item.assignment) {
+      console.warn(
+        `[${item.username}] Jumlah status (${bucketSum}) != Assignment (${item.assignment}). ` +
+        `Kemungkinan ada status mentah yang belum di-mapping.`
+      );
+    }
   });
 }
 
@@ -294,8 +316,8 @@ function validateData() {
  |========================================================================== */
 function buildMeta() {
   Dashboard.meta.totalEnumerator = Dashboard.enumerators.length;
-  Dashboard.meta.totalDistrict   = Dashboard.districts.length;
-  Dashboard.meta.generatedAt     = new Date().toISOString();
+  Dashboard.meta.totalDistrict = Dashboard.districts.length;
+  Dashboard.meta.generatedAt = new Date().toISOString();
 }
 
 /* ==========================================================================
@@ -306,8 +328,9 @@ function processEnumerator(user) {
     username: user.username,
     assignment: safeNumber(user.total),
 
-    open: 0, draft: 0, submitted: 0,
-    approved: 0, edited: 0, rejected: 0, revoked: 0,
+    open: 0, draft: 0, submitted: 0, submittedRespondent: 0,
+    approved: 0, editedAdmin: 0, editedPengawas: 0, edited: 0,
+    rejected: 0, revoked: 0,
     reviewed: 0, completed: 0,
 
     progressSubmit: 0, progressApprove: 0,
@@ -320,23 +343,29 @@ function processEnumerator(user) {
 
   user.regionSummary.forEach((region) => {
     const result = processRegion(region);
-    enumerator.open       += result.open;
-    enumerator.draft      += result.draft;
-    enumerator.submitted  += result.submitted;
-    enumerator.approved   += result.approved;
-    enumerator.edited     += result.edited;
-    enumerator.rejected   += result.rejected;
-    enumerator.revoked    += result.revoked;
+    enumerator.open += result.open;
+    enumerator.draft += result.draft;
+    enumerator.submitted += result.submitted;
+    enumerator.submittedRespondent += result.submittedRespondent;
+    enumerator.approved += result.approved;
+    enumerator.editedAdmin += result.editedAdmin;
+    enumerator.editedPengawas += result.editedPengawas;
+    enumerator.edited += result.edited;
+    enumerator.rejected += result.rejected;
+    enumerator.revoked += result.revoked;
     enumerator.regions.push(result);
   });
 
-  Dashboard.summary.open       += enumerator.open;
-  Dashboard.summary.draft      += enumerator.draft;
-  Dashboard.summary.submitted  += enumerator.submitted;
-  Dashboard.summary.approved   += enumerator.approved;
-  Dashboard.summary.edited     += enumerator.edited;
-  Dashboard.summary.rejected   += enumerator.rejected;
-  Dashboard.summary.revoked    += enumerator.revoked;
+  Dashboard.summary.open += enumerator.open;
+  Dashboard.summary.draft += enumerator.draft;
+  Dashboard.summary.submitted += enumerator.submitted;
+  Dashboard.summary.submittedRespondent += enumerator.submittedRespondent;
+  Dashboard.summary.approved += enumerator.approved;
+  Dashboard.summary.editedAdmin += enumerator.editedAdmin;
+  Dashboard.summary.editedPengawas += enumerator.editedPengawas;
+  Dashboard.summary.edited += enumerator.edited;
+  Dashboard.summary.rejected += enumerator.rejected;
+  Dashboard.summary.revoked += enumerator.revoked;
 
   calculateProgress(enumerator);
   Dashboard.enumerators.push(enumerator);
@@ -346,32 +375,30 @@ function processEnumerator(user) {
  | Process 1 Kecamatan
  |========================================================================== */
 function processRegion(region) {
+  const editedAdmin = getStatusCount(region.statusBreakdown, "EDITED BY Admin Kabupaten");
+  const editedPengawas = getStatusCount(region.statusBreakdown, "EDITED BY Pengawas");
+
   return {
     kdsubsls: String(region.regionCode),
     regionCode: Number(String(region.regionCode).substring(0, 7)),
     assignment: safeNumber(region.total),
-    open:      getStatusCount(region.statusBreakdown, "OPEN"),
-    draft:     getStatusCount(region.statusBreakdown, "DRAFT"),
+    open: getStatusCount(region.statusBreakdown, "OPEN"),
+    draft: getStatusCount(region.statusBreakdown, "DRAFT"),
     submitted: getStatusCount(region.statusBreakdown, "SUBMITTED BY Pencacah"),
-    approved:  getStatusCount(region.statusBreakdown, "APPROVED BY Pengawas"),
-    rejected:  getStatusCount(region.statusBreakdown, "REJECTED BY Pengawas"),
-    revoked:   getStatusCount(region.statusBreakdown, "REVOKED BY Pengawas"),
-    edited:
-      getStatusCount(region.statusBreakdown, "EDITED BY Admin Kabupaten") +
-      getStatusCount(region.statusBreakdown, "EDITED BY Pengawas"),
+    submittedRespondent: getStatusCount(region.statusBreakdown, "SUBMITTED RESPONDENT"),
+    approved: getStatusCount(region.statusBreakdown, "APPROVED BY Pengawas"),
+    rejected: getStatusCount(region.statusBreakdown, "REJECTED BY Pengawas"),
+    revoked: getStatusCount(region.statusBreakdown, "REVOKED BY Pengawas"),
+    editedAdmin: editedAdmin,
+    editedPengawas: editedPengawas,
+    edited: editedAdmin + editedPengawas, // gabungan (tetap dipakai progress/charts)
   };
 }
 
 /* ==========================================================================
  | Hitung Progress Enumerator / Pengawas
- |
- | Progress Submit  = Submitted / Assignment
- | Progress Approve = Approved  / Assignment
- | Progress Review  = (Approved + Edited + Rejected + Revoked) / Assignment
- |                    → Dashboard Pengawas
- | Progress Total   = (Submitted + Approved + Edited + Rejected + Revoked)
- |                    / Assignment
- |                    → Dashboard Pencacah
+ | reviewed  = approved + edited + rejected + revoked
+ | completed = submitted + submittedRespondent + reviewed
  |========================================================================== */
 function calculateProgress(item) {
   if (item.assignment <= 0) {
@@ -384,13 +411,13 @@ function calculateProgress(item) {
     return;
   }
 
-  item.reviewed  = item.approved + item.edited + item.rejected + item.revoked;
-  item.completed = item.submitted + item.reviewed;
+  item.reviewed = item.approved + item.edited + item.rejected + item.revoked;
+  item.completed = item.submitted + item.submittedRespondent + item.reviewed;
 
-  item.progressSubmit  = percentage(item.submitted, item.assignment);
-  item.progressApprove = percentage(item.approved,  item.assignment);
-  item.progressReview  = percentage(item.reviewed,  item.assignment);
-  item.progressTotal   = percentage(item.completed, item.assignment);
+  item.progressSubmit = percentage(item.submitted, item.assignment);
+  item.progressApprove = percentage(item.approved, item.assignment);
+  item.progressReview = percentage(item.reviewed, item.assignment);
+  item.progressTotal = percentage(item.completed, item.assignment);
 }
 
 /* ==========================================================================
@@ -406,8 +433,9 @@ function buildDistrict() {
           regionCode: region.regionCode,
           name: REGION_MAP[region.regionCode] ?? region.regionCode,
           assignment: 0,
-          open: 0, draft: 0, submitted: 0,
-          approved: 0, edited: 0, rejected: 0, revoked: 0,
+          open: 0, draft: 0, submitted: 0, submittedRespondent: 0,
+          approved: 0, editedAdmin: 0, editedPengawas: 0, edited: 0,
+          rejected: 0, revoked: 0,
           reviewed: 0, completed: 0,
           progressSubmit: 0, progressApprove: 0,
           progressReview: 0, progressTotal: 0,
@@ -417,15 +445,20 @@ function buildDistrict() {
 
       const d = districtMap.get(region.regionCode);
       d.assignment += region.assignment;
-      d.open       += region.open;
-      d.draft      += region.draft;
-      d.submitted  += region.submitted;
-      d.approved   += region.approved;
-      d.edited     += region.edited;
-      d.rejected   += region.rejected;
-      d.revoked    += region.revoked;
-      d.reviewed   += region.approved + region.edited + region.rejected + region.revoked;
-      d.completed  += region.submitted + region.approved + region.edited + region.rejected + region.revoked;
+      d.open += region.open;
+      d.draft += region.draft;
+      d.submitted += region.submitted;
+      d.submittedRespondent += region.submittedRespondent;
+      d.approved += region.approved;
+      d.editedAdmin += region.editedAdmin;
+      d.editedPengawas += region.editedPengawas;
+      d.edited += region.edited;
+      d.rejected += region.rejected;
+      d.revoked += region.revoked;
+      d.reviewed += region.approved + region.edited + region.rejected + region.revoked;
+      d.completed +=
+        region.submitted + region.submittedRespondent +
+        region.approved + region.edited + region.rejected + region.revoked;
       d.enumerators++;
     });
   });
@@ -433,31 +466,26 @@ function buildDistrict() {
   Dashboard.districts = Array.from(districtMap.values());
 
   Dashboard.districts.forEach((d) => {
-    d.progressSubmit  = percentage(d.submitted, d.assignment);
-    d.progressApprove = percentage(d.approved,  d.assignment);
-    d.progressReview  = percentage(d.reviewed,  d.assignment);
-    d.progressTotal   = percentage(d.completed, d.assignment);
+    d.progressSubmit = percentage(d.submitted, d.assignment);
+    d.progressApprove = percentage(d.approved, d.assignment);
+    d.progressReview = percentage(d.reviewed, d.assignment);
+    d.progressTotal = percentage(d.completed, d.assignment);
   });
 }
 
 /* ==========================================================================
  | Calculate National Summary
- |
- | PENCACAH  : progressTotal   = completed / assignment
- |             completed       = submitted + approved + edited + rejected + revoked
- |
- | PENGAWAS  : progressReview  = reviewed  / assignment
- |             reviewed        = approved + edited + rejected + revoked
  |========================================================================== */
 function calculateSummary() {
   const s = Dashboard.summary;
-  s.reviewed  = s.approved + s.edited + s.rejected + s.revoked;
-  s.completed = s.submitted + s.reviewed;
+  s.edited = s.editedAdmin + s.editedPengawas; // jaga konsistensi
+  s.reviewed = s.approved + s.edited + s.rejected + s.revoked;
+  s.completed = s.submitted + s.submittedRespondent + s.reviewed;
 
-  s.progressSubmit  = percentage(s.submitted, s.assignment);
-  s.progressApprove = percentage(s.approved,  s.assignment);
-  s.progressReview  = percentage(s.reviewed,  s.assignment); // dashboard Pengawas
-  s.progressTotal   = percentage(s.completed, s.assignment); // dashboard Pencacah
+  s.progressSubmit = percentage(s.submitted, s.assignment);
+  s.progressApprove = percentage(s.approved, s.assignment);
+  s.progressReview = percentage(s.reviewed, s.assignment); // dashboard Pengawas
+  s.progressTotal = percentage(s.completed, s.assignment); // dashboard Pencacah
 
   s.remaining = Math.max(0, s.assignment - s.completed);
 }
