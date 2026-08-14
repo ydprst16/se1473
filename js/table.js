@@ -3,16 +3,17 @@
 | table.js (Tabulator)
 |--------------------------------------------------------------------------
 | Tab 1 : Ringkasan per Petugas (#gridTable)
-| Tab 2 : Detail per Kecamatan  (#gridTableDetail)  -- per kdsubsls (16 dig)
+| Tab 2 : Detail per Kecamatan  (#gridTableDetail)  -- per idsubsls (16 dig)
 | PERUBAHAN v5:
 | - Kolom No, Assignment, dan Progress menggunakan "width" absolut agar
 |   Ukurannya terkunci, tidak melebar, dan tidak menyusut.
 | - Judul "Assignment" dikembalikan menjadi 1 baris agar tidak terpotong.
+| - Menambahkan kolom Kelurahan dan Nama SLS dari referensi SUBSLS_MAP.
 |--------------------------------------------------------------------------
 */
 
 let table = null;        // Tab 1 - per petugas
-let tableDetail = null;  // Tab 2 - per kdsubsls
+let tableDetail = null;  // Tab 2 - per idsubsls
 
 /* Inject CSS: izinkan judul header wrap ke bawah (tidak terpotong) */
 (function injectHeaderWrapCSS() {
@@ -186,11 +187,23 @@ function renderTableDetail() {
 
   Dashboard.enumerators.forEach((e) => {
     e.regions.forEach((r) => {
+      const currentId = r.idsubsls || String(r.regionCode);
+      
+      // Mengambil nama kelurahan & SLS dari SUBSLS_MAP berdasarkan IDSubSLS 16-digit
+      // Fallback ke string "-" jika idsubsls tidak ditemukan di master
+      const ref = SUBSLS_MAP[currentId] || { nmdesa: "-", nmsls: "-" };
+
       detailData.push({
         no: no++,
         username: e.username,
-        kdsubsls: r.kdsubsls || String(r.regionCode),
+        idsubsls: currentId,
         kecamatan: REGION_MAP[r.regionCode] || String(r.regionCode),
+        
+        // --- Kolom Baru ---
+        kelurahan: ref.nmdesa,
+        nmsls: ref.nmsls,
+        // ------------------
+
         assignment: r.assignment || 0,
         open: r.open || 0,
         draft: r.draft || 0,
@@ -210,7 +223,7 @@ function renderTableDetail() {
 
   tableDetail = new Tabulator("#gridTableDetail", {
     data: detailData,
-    layout: "fitColumns",
+    layout: "fitColumns", // Kolom menyesuaikan lebar sisa tabel
     responsiveLayout: false,
     height: "650px",
     movableColumns: true,
@@ -220,16 +233,35 @@ function renderTableDetail() {
     placeholder: "Tidak ada data",
 
     columns: [
-      { title: "No", field: "no", hozAlign: "center", width: 50 }, // Dikunci 50px
+      { title: "No", field: "no", hozAlign: "center", width: 50 },
       { title: "Username", field: "username", minWidth: 140, widthGrow: 2, headerFilter: "input" },
-      { title: "kdsubsls", field: "kdsubsls", minWidth: 150, widthGrow: 1, hozAlign: "center", headerFilter: "input" },
+      { title: "IDSubSLS", field: "idsubsls", minWidth: 150, widthGrow: 1, hozAlign: "center", headerFilter: "input" },
       { title: "Kecamatan", field: "kecamatan", minWidth: 130, widthGrow: 2, headerFilter: "input" },
-      { title: "Assignment", field: "assignment", hozAlign: "right", headerHozAlign: "center", width: 100 }, // Dikunci 100px, satu baris
+      
+      // --- Definisi Kolom Baru di Tabulator ---
+      { 
+        title: "Kelurahan", 
+        field: "kelurahan", 
+        minWidth: 180, 
+        widthGrow: 3, 
+        headerFilter: "input",
+        formatter: "textarea" // Teks akan dibungkus (wrap) ke bawah jika kepanjangan
+      },
+      { 
+        title: "Nama SLS", 
+        field: "nmsls", 
+        minWidth: 90, 
+        widthGrow: 1, 
+        headerFilter: "input" 
+      },
+      // ----------------------------------------
+
+      { title: "Assignment", field: "assignment", hozAlign: "right", headerHozAlign: "center", width: 100 },
       ...statusColumns(),
       {
         title: "Progress",
         field: "progress",
-        width: 120, // Dikunci 120px
+        width: 120,
         hozAlign: "center",
         headerHozAlign: "center",
         formatter: progressCellFormatter,
@@ -268,8 +300,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (isDetailActive) {
       if (tableDetail) {
-        tableDetail.download("xlsx", "monitoring-se-detail-kdsubsls.xlsx", {
-          sheetName: "Detail per kdsubsls",
+        tableDetail.download("xlsx", "monitoring-se-detail-idsubsls.xlsx", {
+          sheetName: "Detail per idsubsls",
         });
       }
     } else {
