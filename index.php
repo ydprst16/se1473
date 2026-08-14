@@ -1567,6 +1567,7 @@
             <script src="js/helper.js"></script>
             <script src="js/processor.js"></script>
             <script src="js/charts.js"></script>
+            <script src="js/master_subsls.js"></script>
             <script src="js/table.js"></script>
             <script src="js/comparison.js"></script>
             <script src="js/app.js"></script>
