@@ -342,8 +342,6 @@ function tampilkanWarningModal(dataNol) {
   const modalLama = document.getElementById("modalWarningProgress");
   if (modalLama) modalLama.remove();
 
-<<<<<<< HEAD
-=======
   // --- CEK ROLE SAAT INI UNTUK MENYESUAIKAN TEKS NOTIFIKASI ---
   const role = typeof currentRole !== "undefined" ? currentRole : "pencacah";
   let deskripsiNotif = "Berikut adalah daftar SLS wilayah tugas yang belum memiliki progress submit atau pengisian sama sekali:";
@@ -352,7 +350,6 @@ function tampilkanWarningModal(dataNol) {
     deskripsiNotif = "Berikut adalah daftar SLS wilayah tugas yang belum diperiksa sama sekali atau progressnya masih 0%:";
   }
 
->>>>>>> 04a0cf9 (add popup warning role pengawas)
   // Buat baris tabel dari data yang progress-nya 0%
   const tabelRows = dataNol.map((item, idx) => `
     <tr>
@@ -383,22 +380,14 @@ function tampilkanWarningModal(dataNol) {
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body p-4">
-<<<<<<< HEAD
-            <p class="text-muted mb-3">Berikut adalah daftar SLS wilayah tugas yang belum memiliki progress submit atau pengisian sama sekali:</p>
-=======
             <!-- Teks Notifikasi Dinamis berdasarkan Role -->
             <p class="text-muted mb-3">${deskripsiNotif}</p>
->>>>>>> 04a0cf9 (add popup warning role pengawas)
             <div class="table-responsive" style="max-height: 400px;">
               <table class="table table-sm table-hover table-bordered align-middle" style="font-size: 13px;">
                 <thead class="table-light sticky-top">
                   <tr>
                     <th class="text-center" width="40">No</th>
-<<<<<<< HEAD
-                    <th>Username PCL</th>
-=======
                     <th>Username</th>
->>>>>>> 04a0cf9 (add popup warning role pengawas)
                     <th class="text-center">IDSubSLS</th>
                     <th>Kecamatan</th>
                     <th>Kelurahan</th>
@@ -444,8 +433,4 @@ function tampilkanWarningModal(dataNol) {
       });
     });
   }
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 04a0cf9 (add popup warning role pengawas)
