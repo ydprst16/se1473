@@ -412,7 +412,7 @@ function calculateProgress(item) {
   }
 
   item.reviewed = item.approved + item.edited + item.rejected + item.revoked;
-  item.completed = item.submitted + item.submittedRespondent + item.reviewed;
+  item.completed = item.submitted + item.reviewed;
 
   item.progressSubmit = percentage(item.submitted, item.assignment);
   item.progressApprove = percentage(item.approved, item.assignment);
@@ -457,7 +457,7 @@ function buildDistrict() {
       d.revoked += region.revoked;
       d.reviewed += region.approved + region.edited + region.rejected + region.revoked;
       d.completed +=
-        region.submitted + region.submittedRespondent +
+        region.submitted +
         region.approved + region.edited + region.rejected + region.revoked;
       d.enumerators++;
     });
@@ -480,7 +480,7 @@ function calculateSummary() {
   const s = Dashboard.summary;
   s.edited = s.editedAdmin + s.editedPengawas; // jaga konsistensi
   s.reviewed = s.approved + s.edited + s.rejected + s.revoked;
-  s.completed = s.submitted + s.submittedRespondent + s.reviewed;
+  s.completed = s.submitted + s.reviewed;
 
   s.progressSubmit = percentage(s.submitted, s.assignment);
   s.progressApprove = percentage(s.approved, s.assignment);
