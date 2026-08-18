@@ -1263,7 +1263,7 @@
                 <i class="bi bi-bar-chart-fill"></i>
                 <div>
                     SE2026 Monitoring Center
-                    <div class="sub-title">Monitoring Pencacah • Kota Dumai</div>
+                    <div class="sub-title">Monitoring Pendataan • Kota Dumai</div>
                 </div>
             </div>
         </div>
