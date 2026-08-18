@@ -183,26 +183,23 @@ function renderTable() {
    ============================================================ */
 function renderTableDetail() {
   const detailData = [];
+  const slsNolProgress = []; // <-- Array untuk menampung data progress 0%
   let no = 1;
 
   Dashboard.enumerators.forEach((e) => {
     e.regions.forEach((r) => {
       const currentId = r.idsubsls || String(r.regionCode);
       const ref = SUBSLS_MAP[currentId] || { nmdesa: "-", nmsls: "-" };
-
-      // --- MENCEGAH ADA ENTER DI DATA EXCEL ---
-      // Jika ada baris baru (enter), akan diubah jadi 1 spasi horizontal
       const namaSlsBersih = (ref.nmsls || "-").replace(/\s+/g, ' ').trim();
+      const progressVal = regionProgress(r);
 
-      detailData.push({
+      const itemDetail = {
         no: no++,
         username: e.username,
         idsubsls: currentId,
         kecamatan: REGION_MAP[r.regionCode] || String(r.regionCode),
-        
         kelurahan: ref.nmdesa,
-        nmsls: namaSlsBersih, // Menggunakan data yang sudah dibersihkan
-        
+        nmsls: namaSlsBersih,
         assignment: r.assignment || 0,
         open: r.open || 0,
         draft: r.draft || 0,
@@ -213,8 +210,15 @@ function renderTableDetail() {
         editedPengawas: r.editedPengawas || 0,
         rejected: r.rejected || 0,
         revoked: r.revoked || 0,
-        progress: regionProgress(r),
-      });
+        progress: progressVal,
+      };
+
+      detailData.push(itemDetail);
+
+      // --- CEK JIKA PROGRESS 0% ---
+      if (progressVal === 0) {
+        slsNolProgress.push(itemDetail);
+      }
     });
   });
 
@@ -236,7 +240,6 @@ function renderTableDetail() {
       { title: "Username", field: "username", minWidth: 140, widthGrow: 2, headerFilter: "input" },
       { title: "IDSubSLS", field: "idsubsls", minWidth: 150, widthGrow: 1, hozAlign: "center", headerFilter: "input" },
       { title: "Kecamatan", field: "kecamatan", minWidth: 130, widthGrow: 2, headerFilter: "input" },
-      
       { 
         title: "Kelurahan", 
         field: "kelurahan", 
@@ -245,27 +248,19 @@ function renderTableDetail() {
         headerFilter: "input",
         formatter: "textarea" 
       },
-      
-      // --- PERBAIKAN KOLOM NAMA SLS SATU BARIS ---
       { 
         title: "Nama SLS", 
         field: "nmsls", 
-        minWidth: 100, // Sedikit diperbesar dari 90 agar judul muat di satu baris
+        minWidth: 100, 
         widthGrow: 1, 
         headerFilter: "input",
-        
-        // Memaksa judul tidak turun baris, membypass CSS global
         titleFormatter: function(cell) {
             return `<div style="white-space: nowrap;">Nama SLS</div>`;
         },
-
-        // Memaksa isi cell (data) menjadi 1 baris saja
         formatter: function(cell) {
           return `<div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${cell.getValue()}</div>`;
         }
       },
-      // -------------------------------------------
-
       { title: "Assignment", field: "assignment", hozAlign: "right", headerHozAlign: "center", width: 100 },
       ...statusColumns(),
       {
@@ -282,6 +277,11 @@ function renderTableDetail() {
       console.log("[detail]", row.getData());
     },
   });
+
+  // --- TRIGER POPUP WARNING JIKA ADA DATA PROGRESS 0% ---
+  if (slsNolProgress.length > 0) {
+    tampilkanWarningModal(slsNolProgress);
+  }
 }
 
 /* ============================================================
@@ -333,3 +333,95 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 });
+
+/* ============================================================
+   Fungsi Pembuat & Penampil Popup Warning (Bootstrap 5)
+   ============================================================ */
+function tampilkanWarningModal(dataNol) {
+  // Hapus modal lama jika sudah ada di DOM agar tidak duplikat
+  const modalLama = document.getElementById("modalWarningProgress");
+  if (modalLama) modalLama.remove();
+
+  // Buat baris tabel dari data yang progress-nya 0%
+  const tabelRows = dataNol.map((item, idx) => `
+    <tr>
+      <td class="text-center">${idx + 1}</td>
+      <td><strong>${item.username}</strong></td>
+      <td class="text-center"><code>${item.idsubsls}</code></td>
+      <td>${item.kecamatan}</td>
+      <td>${item.kelurahan}</td>
+      <td>${item.nmsls}</td>
+    </tr>
+  `).join("");
+
+  // Struktur HTML Modal Bootstrap 5 (Tema Merah / Danger)
+  const modalHtml = `
+    <div class="modal fade" id="modalWarningProgress" tabindex="-1" aria-labelledby="modalWarningLabel" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <!-- Menggunakan border-danger -->
+        <div class="modal-content border-start border-danger border-5">
+          <!-- Menggunakan bg-danger-subtle dan text-danger-emphasis -->
+          <div class="modal-header bg-danger-subtle text-danger-emphasis">
+            <h5 class="modal-title d-flex align-items-center" id="modalWarningLabel">
+              <!-- Icon seru warna merah (text-danger) -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-octagon-fill me-2 text-danger" viewBox="0 0 16 16">
+                <path d="M11.46.146A.5.5 0 0 0 11.107 0H4.893a.5.5 0 0 0-.353.146L.146 4.54A.5.5 0 0 0 0 4.893v6.214a.5.5 0 0 0 .146.353l4.394 4.394a.5.5 0 0 0 .353.146h6.214a.5.5 0 0 0 .353-.146l4.394-4.394a.5.5 0 0 0 .146-.353V4.893a.5.5 0 0 0-.146-.353L11.46.146zM8 4c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 4.995A.905.905 0 0 1 8 4m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/>
+              </svg>
+              Perhatian: Terdapat ${dataNol.length} SLS dengan Progress 0%
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body p-4">
+            <p class="text-muted mb-3">Berikut adalah daftar SLS wilayah tugas yang belum memiliki progress submit atau pengisian sama sekali:</p>
+            <div class="table-responsive" style="max-height: 400px;">
+              <table class="table table-sm table-hover table-bordered align-middle" style="font-size: 13px;">
+                <thead class="table-light sticky-top">
+                  <tr>
+                    <th class="text-center" width="40">No</th>
+                    <th>Username PCL</th>
+                    <th class="text-center">IDSubSLS</th>
+                    <th>Kecamatan</th>
+                    <th>Kelurahan</th>
+                    <th>Nama SLS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${tabelRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="modal-footer bg-light">
+            <!-- Tombol warna merah -->
+            <button type="button" class="btn btn-danger px-4 fw-semibold" data-bs-dismiss="modal">Saya Mengerti & Tutup</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Inject modal ke dalam body dokumen
+  document.body.insertAdjacentHTML("beforeend", modalHtml);
+
+  // Inisialisasi dan tampilkan modal menggunakan class Bootstrap 5 instansiasi instan
+  if (typeof bootstrap !== "undefined" && bootstrap.Modal) {
+    const warningModal = new bootstrap.Modal(document.getElementById("modalWarningProgress"));
+    warningModal.show();
+  } else {
+    // Fallback jika library Bootstrap JS belum ter-load sempurna secara global
+    console.warn("Bootstrap JS tidak terdeteksi. Menampilkan fallback modal.");
+    const modalEl = document.getElementById("modalWarningProgress");
+    modalEl.classList.add("show");
+    modalEl.style.display = "block";
+    modalEl.style.backgroundColor = "rgba(0,0,0,0.5)";
+    
+    // Handler penutup untuk fallback modal
+    const closeButtons = modalEl.querySelectorAll('[data-bs-dismiss="modal"]');
+    closeButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        modalEl.style.display = "none";
+        modalEl.remove();
+      });
+    });
+  }
+}
