@@ -20,6 +20,7 @@
 | 2. Field gabungan "edited" TETAP ada (= editedAdmin + editedPengawas)
 |    dipakai oleh progressReview, buildStatus (charts), dan app.js.
 | 3. + bucket submittedRespondent ("SUBMITTED RESPONDENT").
+| 4. Mapping email to name
 |--------------------------------------------------------------------------
 */
 const Dashboard = {
@@ -32,18 +33,18 @@ const Dashboard = {
     submitted: 0,
     submittedRespondent: 0,
     approved: 0,
-    editedAdmin: 0,     // NEW
-    editedPengawas: 0,  // NEW
-    edited: 0,          // = editedAdmin + editedPengawas
+    editedAdmin: 0,
+    editedPengawas: 0,
+    edited: 0,
     rejected: 0,
     revoked: 0,
-    reviewed: 0,        // = approved + edited + rejected + revoked
-    completed: 0,       // = submitted + submittedRespondent + reviewed
+    reviewed: 0,
+    completed: 0,
     remaining: 0,
     progressSubmit: 0,
     progressApprove: 0,
-    progressReview: 0,  // Pengawas
-    progressTotal: 0,   // Pencacah
+    progressReview: 0, // Pengawas
+    progressTotal: 0, // Pencacah
   },
 
   enumerators: [],
@@ -59,7 +60,11 @@ const Dashboard = {
   },
 
   distribution: {
-    "0-20": 0, "20-40": 0, "40-60": 0, "60-80": 0, "80-100": 0,
+    "0-20": 0,
+    "20-40": 0,
+    "40-60": 0,
+    "60-80": 0,
+    "80-100": 0,
   },
 
   status: [],
@@ -83,8 +88,8 @@ const STATUS_MAP = {
   "APPROVED BY Pengawas": "approved",
   "REJECTED BY Pengawas": "rejected",
   "REVOKED BY Pengawas": "revoked",
-  "EDITED BY Admin Kabupaten": "editedAdmin",   // NEW (dipisah)
-  "EDITED BY Pengawas": "editedPengawas",        // NEW (dipisah)
+  "EDITED BY Admin Kabupaten": "editedAdmin",
+  "EDITED BY Pengawas": "editedPengawas",
 };
 
 const PROGRESS_BUCKETS = ["0-20", "20-40", "40-60", "60-80", "80-100"];
@@ -133,7 +138,8 @@ async function loadDashboard(jsonFile = "data/latest.json") {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
     const data = await response.json();
-    if (!Array.isArray(data)) throw new Error("Format JSON harus berupa Array.");
+    if (!Array.isArray(data))
+      throw new Error("Format JSON harus berupa Array.");
 
     Dashboard.raw = data;
     processDashboard();
@@ -143,7 +149,11 @@ async function loadDashboard(jsonFile = "data/latest.json") {
     Dashboard.raw = [];
     resetDashboard();
     if (typeof Swal !== "undefined") {
-      Swal.fire({ icon: "error", title: "Gagal Memuat Data", text: err.message });
+      Swal.fire({
+        icon: "error",
+        title: "Gagal Memuat Data",
+        text: err.message,
+      });
     }
   }
 }
@@ -153,22 +163,45 @@ async function loadDashboard(jsonFile = "data/latest.json") {
  |========================================================================== */
 function resetDashboard() {
   Dashboard.summary = {
-    assignment: 0, open: 0, draft: 0, submitted: 0, submittedRespondent: 0,
-    approved: 0, editedAdmin: 0, editedPengawas: 0, edited: 0,
-    rejected: 0, revoked: 0,
-    reviewed: 0, completed: 0, remaining: 0,
-    progressSubmit: 0, progressApprove: 0, progressReview: 0, progressTotal: 0,
+    assignment: 0,
+    open: 0,
+    draft: 0,
+    submitted: 0,
+    submittedRespondent: 0,
+    approved: 0,
+    editedAdmin: 0,
+    editedPengawas: 0,
+    edited: 0,
+    rejected: 0,
+    revoked: 0,
+    reviewed: 0,
+    completed: 0,
+    remaining: 0,
+    progressSubmit: 0,
+    progressApprove: 0,
+    progressReview: 0,
+    progressTotal: 0,
   };
 
   Dashboard.enumerators = [];
   Dashboard.districts = [];
 
   Dashboard.rankings = {
-    topProgress: [], bottomProgress: [],
-    topSubmit: [], topApprove: [], topReview: [], topAssignment: [],
+    topProgress: [],
+    bottomProgress: [],
+    topSubmit: [],
+    topApprove: [],
+    topReview: [],
+    topAssignment: [],
   };
 
-  Dashboard.distribution = { "0-20": 0, "20-40": 0, "40-60": 0, "60-80": 0, "80-100": 0 };
+  Dashboard.distribution = {
+    "0-20": 0,
+    "20-40": 0,
+    "40-60": 0,
+    "60-80": 0,
+    "80-100": 0,
+  };
   Dashboard.status = [];
   Dashboard.filters = { districts: [], usernames: [] };
   Dashboard.searchIndex = {};
@@ -223,23 +256,33 @@ function buildRankings() {
     .slice(0, 10);
 
   Dashboard.rankings.topSubmit = [...data]
-    .sort((a, b) => b.submitted - a.submitted).slice(0, 10);
+    .sort((a, b) => b.submitted - a.submitted)
+    .slice(0, 10);
 
   Dashboard.rankings.topApprove = [...data]
-    .sort((a, b) => b.approved - a.approved).slice(0, 10);
+    .sort((a, b) => b.approved - a.approved)
+    .slice(0, 10);
 
   Dashboard.rankings.topReview = [...data]
-    .sort((a, b) => b.reviewed - a.reviewed).slice(0, 10);
+    .sort((a, b) => b.reviewed - a.reviewed)
+    .slice(0, 10);
 
   Dashboard.rankings.topAssignment = [...data]
-    .sort((a, b) => b.assignment - a.assignment).slice(0, 10);
+    .sort((a, b) => b.assignment - a.assignment)
+    .slice(0, 10);
 }
 
 /* ==========================================================================
  | Build Distribution (ROLE-AWARE)
  |========================================================================== */
 function buildDistribution() {
-  Dashboard.distribution = { "0-20": 0, "20-40": 0, "40-60": 0, "60-80": 0, "80-100": 0 };
+  Dashboard.distribution = {
+    "0-20": 0,
+    "20-40": 0,
+    "40-60": 0,
+    "60-80": 0,
+    "80-100": 0,
+  };
 
   Dashboard.enumerators.forEach((item) => {
     const p = pickProgress(item);
@@ -252,14 +295,18 @@ function buildDistribution() {
 }
 
 /* ==========================================================================
- | Build Status Dataset (7 kolom untuk charts — pakai edited GABUNGAN)
- | Urutan: open, draft, submitted, approved, edited, rejected, revoked
+ | Build Status Dataset (7 kolom untuk charts)
  |========================================================================== */
 function buildStatus() {
   const s = Dashboard.summary;
   Dashboard.status = [
-    s.open, s.draft, s.submitted,
-    s.approved, s.edited, s.rejected, s.revoked,
+    s.open,
+    s.draft,
+    s.submitted,
+    s.approved,
+    s.edited,
+    s.rejected,
+    s.revoked,
   ];
 }
 
@@ -272,7 +319,10 @@ function buildFilters() {
     .sort((a, b) => a.localeCompare(b));
 
   Dashboard.filters.districts = Dashboard.districts
-    .map((item) => ({ value: item.regionCode, label: item.name ?? item.regionCode }))
+    .map((item) => ({
+      value: item.regionCode,
+      label: item.name ?? item.regionCode,
+    }))
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
@@ -292,20 +342,29 @@ function buildSearchIndex() {
 function validateData() {
   Dashboard.enumerators.forEach((item) => {
     if (item.assignment <= 0) console.warn(`[${item.username}] Assignment = 0`);
-    if (item.approved > item.assignment) console.warn(`[${item.username}] Approved melebihi Assignment`);
-    if (item.submitted > item.assignment) console.warn(`[${item.username}] Submitted melebihi Assignment`);
-    if (item.edited > item.assignment) console.warn(`[${item.username}] Edited melebihi Assignment`);
-    if (item.reviewed > item.assignment) console.warn(`[${item.username}] Reviewed melebihi Assignment`);
+    if (item.approved > item.assignment)
+      console.warn(`[${item.username}] Approved melebihi Assignment`);
+    if (item.submitted > item.assignment)
+      console.warn(`[${item.username}] Submitted melebihi Assignment`);
+    if (item.edited > item.assignment)
+      console.warn(`[${item.username}] Edited melebihi Assignment`);
+    if (item.reviewed > item.assignment)
+      console.warn(`[${item.username}] Reviewed melebihi Assignment`);
 
-    // Jumlah semua bucket harus == assignment (deteksi status belum di-mapping)
     const bucketSum =
-      item.open + item.draft + item.submitted + item.submittedRespondent +
-      item.approved + item.editedAdmin + item.editedPengawas +
-      item.rejected + item.revoked;
+      item.open +
+      item.draft +
+      item.submitted +
+      item.submittedRespondent +
+      item.approved +
+      item.editedAdmin +
+      item.editedPengawas +
+      item.rejected +
+      item.revoked;
     if (bucketSum !== item.assignment) {
       console.warn(
         `[${item.username}] Jumlah status (${bucketSum}) != Assignment (${item.assignment}). ` +
-        `Kemungkinan ada status mentah yang belum di-mapping.`
+          `Kemungkinan ada status mentah yang belum di-mapping.`,
       );
     }
   });
@@ -321,20 +380,39 @@ function buildMeta() {
 }
 
 /* ==========================================================================
- | Process 1 User
+ | Process 1 User (DENGAN KONVERSI EMAIL -> NAMA)
  |========================================================================== */
 function processEnumerator(user) {
+  // Cek apakah email user terdaftar di USERNAME_MAP (dari master_name_full.js)
+  const emailKey = String(user.username || "")
+    .trim()
+    .toLowerCase();
+  const displayName =
+    typeof USERNAME_MAP !== "undefined" && USERNAME_MAP[emailKey]
+      ? USERNAME_MAP[emailKey]
+      : user.username;
+
   const enumerator = {
-    username: user.username,
+    username: displayName, // Menggunakan nama asli dari mapping
     assignment: safeNumber(user.total),
 
-    open: 0, draft: 0, submitted: 0, submittedRespondent: 0,
-    approved: 0, editedAdmin: 0, editedPengawas: 0, edited: 0,
-    rejected: 0, revoked: 0,
-    reviewed: 0, completed: 0,
+    open: 0,
+    draft: 0,
+    submitted: 0,
+    submittedRespondent: 0,
+    approved: 0,
+    editedAdmin: 0,
+    editedPengawas: 0,
+    edited: 0,
+    rejected: 0,
+    revoked: 0,
+    reviewed: 0,
+    completed: 0,
 
-    progressSubmit: 0, progressApprove: 0,
-    progressReview: 0, progressTotal: 0,
+    progressSubmit: 0,
+    progressApprove: 0,
+    progressReview: 0,
+    progressTotal: 0,
 
     regions: [],
   };
@@ -375,8 +453,14 @@ function processEnumerator(user) {
  | Process 1 Kecamatan
  |========================================================================== */
 function processRegion(region) {
-  const editedAdmin = getStatusCount(region.statusBreakdown, "EDITED BY Admin Kabupaten");
-  const editedPengawas = getStatusCount(region.statusBreakdown, "EDITED BY Pengawas");
+  const editedAdmin = getStatusCount(
+    region.statusBreakdown,
+    "EDITED BY Admin Kabupaten",
+  );
+  const editedPengawas = getStatusCount(
+    region.statusBreakdown,
+    "EDITED BY Pengawas",
+  );
 
   return {
     idsubsls: String(region.regionCode),
@@ -385,20 +469,21 @@ function processRegion(region) {
     open: getStatusCount(region.statusBreakdown, "OPEN"),
     draft: getStatusCount(region.statusBreakdown, "DRAFT"),
     submitted: getStatusCount(region.statusBreakdown, "SUBMITTED BY Pencacah"),
-    submittedRespondent: getStatusCount(region.statusBreakdown, "SUBMITTED RESPONDENT"),
+    submittedRespondent: getStatusCount(
+      region.statusBreakdown,
+      "SUBMITTED RESPONDENT",
+    ),
     approved: getStatusCount(region.statusBreakdown, "APPROVED BY Pengawas"),
     rejected: getStatusCount(region.statusBreakdown, "REJECTED BY Pengawas"),
     revoked: getStatusCount(region.statusBreakdown, "REVOKED BY Pengawas"),
     editedAdmin: editedAdmin,
     editedPengawas: editedPengawas,
-    edited: editedAdmin + editedPengawas, // gabungan (tetap dipakai progress/charts)
+    edited: editedAdmin + editedPengawas,
   };
 }
 
 /* ==========================================================================
  | Hitung Progress Enumerator / Pengawas
- | reviewed  = approved + edited + rejected + revoked
- | completed = submitted + submittedRespondent + reviewed
  |========================================================================== */
 function calculateProgress(item) {
   if (item.assignment <= 0) {
@@ -433,12 +518,22 @@ function buildDistrict() {
           regionCode: region.regionCode,
           name: REGION_MAP[region.regionCode] ?? region.regionCode,
           assignment: 0,
-          open: 0, draft: 0, submitted: 0, submittedRespondent: 0,
-          approved: 0, editedAdmin: 0, editedPengawas: 0, edited: 0,
-          rejected: 0, revoked: 0,
-          reviewed: 0, completed: 0,
-          progressSubmit: 0, progressApprove: 0,
-          progressReview: 0, progressTotal: 0,
+          open: 0,
+          draft: 0,
+          submitted: 0,
+          submittedRespondent: 0,
+          approved: 0,
+          editedAdmin: 0,
+          editedPengawas: 0,
+          edited: 0,
+          rejected: 0,
+          revoked: 0,
+          reviewed: 0,
+          completed: 0,
+          progressSubmit: 0,
+          progressApprove: 0,
+          progressReview: 0,
+          progressTotal: 0,
           enumerators: 0,
         });
       }
@@ -455,10 +550,14 @@ function buildDistrict() {
       d.edited += region.edited;
       d.rejected += region.rejected;
       d.revoked += region.revoked;
-      d.reviewed += region.approved + region.edited + region.rejected + region.revoked;
+      d.reviewed +=
+        region.approved + region.edited + region.rejected + region.revoked;
       d.completed +=
         region.submitted +
-        region.approved + region.edited + region.rejected + region.revoked;
+        region.approved +
+        region.edited +
+        region.rejected +
+        region.revoked;
       d.enumerators++;
     });
   });
@@ -478,14 +577,14 @@ function buildDistrict() {
  |========================================================================== */
 function calculateSummary() {
   const s = Dashboard.summary;
-  s.edited = s.editedAdmin + s.editedPengawas; // jaga konsistensi
+  s.edited = s.editedAdmin + s.editedPengawas;
   s.reviewed = s.approved + s.edited + s.rejected + s.revoked;
   s.completed = s.submitted + s.reviewed;
 
   s.progressSubmit = percentage(s.submitted, s.assignment);
   s.progressApprove = percentage(s.approved, s.assignment);
-  s.progressReview = percentage(s.reviewed, s.assignment); // dashboard Pengawas
-  s.progressTotal = percentage(s.completed, s.assignment); // dashboard Pencacah
+  s.progressReview = percentage(s.reviewed, s.assignment);
+  s.progressTotal = percentage(s.completed, s.assignment);
 
   s.remaining = Math.max(0, s.assignment - s.completed);
 }

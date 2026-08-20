@@ -1564,6 +1564,7 @@
             <script src="https://unpkg.com/tabulator-tables@6.3.0/dist/js/tabulator.min.js"></script>
 
             <!-- JS -->
+            <script src="js/master_name.js"></script>
             <script src="js/helper.js"></script>
             <script src="js/processor.js"></script>
             <script src="js/charts.js"></script>
