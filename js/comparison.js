@@ -1,6 +1,6 @@
 /*
 |--------------------------------------------------------------------------
-| SE2026 Monitoring Center — js/comparison.js  v2 (ROLE-AWARE)
+| SE2026 Monitoring Center — js/comparison.js  v2 (ROLE-AWARE) + MAPPING NAME
 |--------------------------------------------------------------------------
 | Membandingkan progress hari ini (Dashboard.enumerators) dengan snapshot
 | hari sebelumnya yang tersimpan di data/history/.
@@ -20,7 +20,7 @@
 const Comparison = {
   previousDate: null,
   previousMap: {},
-  previousSummary: null, // ringkasan angka kemarin (sekarang termasuk progressReview)
+  previousSummary: null,
   items: [],
   available: false,
 };
@@ -46,24 +46,28 @@ function calcProgressFromRaw(user) {
   const assignment = Number(user.total) || 0;
   if (assignment <= 0) return 0;
 
-  let submitted = 0, approved = 0, rejected = 0, revoked = 0, edited = 0;
+  let submitted = 0,
+    approved = 0,
+    rejected = 0,
+    revoked = 0,
+    edited = 0;
 
   (user.regionSummary || []).forEach((region) => {
     (region.statusBreakdown || []).forEach((s) => {
       const c = Number(s.count) || 0;
-      if      (s.status === "SUBMITTED BY Pencacah")    submitted += c;
-      else if (s.status === "APPROVED BY Pengawas")     approved  += c;
-      else if (s.status === "REJECTED BY Pengawas")     rejected  += c;
-      else if (s.status === "REVOKED BY Pengawas")      revoked   += c;
-      else if (s.status === "EDITED BY Admin Kabupaten") edited   += c;
-      else if (s.status === "EDITED BY Pengawas")        edited   += c;
+      if (s.status === "SUBMITTED BY Pencacah") submitted += c;
+      else if (s.status === "APPROVED BY Pengawas") approved += c;
+      else if (s.status === "REJECTED BY Pengawas") rejected += c;
+      else if (s.status === "REVOKED BY Pengawas") revoked += c;
+      else if (s.status === "EDITED BY Admin Kabupaten") edited += c;
+      else if (s.status === "EDITED BY Pengawas") edited += c;
     });
   });
 
   const numerator =
     comparisonRole() === "pengawas"
-      ? approved + edited + rejected + revoked                  // progressReview
-      : submitted + approved + edited + rejected + revoked;     // progressTotal
+      ? approved + edited + rejected + revoked // progressReview
+      : submitted + approved + edited + rejected + revoked; // progressTotal
 
   return Number(((numerator / assignment) * 100).toFixed(2));
 }
@@ -77,8 +81,12 @@ function calcProgressFromProcessed(e) {
   if (!e) return 0;
   const val =
     comparisonRole() === "pengawas"
-      ? (typeof e.progressReview === "number" ? e.progressReview : 0)
-      : (typeof e.progressTotal  === "number" ? e.progressTotal  : 0);
+      ? typeof e.progressReview === "number"
+        ? e.progressReview
+        : 0
+      : typeof e.progressTotal === "number"
+        ? e.progressTotal
+        : 0;
   return Number(val.toFixed(2));
 }
 
@@ -90,9 +98,15 @@ function calcProgressFromProcessed(e) {
 function aggregateRaw(rawArray) {
   const sum = {
     assignment: 0,
-    open: 0, draft: 0, submitted: 0,
-    approved: 0, edited: 0, rejected: 0, revoked: 0,
-    reviewed: 0, completed: 0,
+    open: 0,
+    draft: 0,
+    submitted: 0,
+    approved: 0,
+    edited: 0,
+    rejected: 0,
+    revoked: 0,
+    reviewed: 0,
+    completed: 0,
     progressSubmit: 0,
     progressApprove: 0,
     progressReview: 0,
@@ -104,41 +118,42 @@ function aggregateRaw(rawArray) {
     (user.regionSummary || []).forEach((r) => {
       (r.statusBreakdown || []).forEach((s) => {
         const c = Number(s.count) || 0;
-        if      (s.status === "OPEN")                      sum.open      += c;
-        else if (s.status === "DRAFT")                     sum.draft     += c;
-        else if (s.status === "SUBMITTED BY Pencacah")     sum.submitted += c;
-        else if (s.status === "APPROVED BY Pengawas")      sum.approved  += c;
-        else if (s.status === "REJECTED BY Pengawas")      sum.rejected  += c;
-        else if (s.status === "REVOKED BY Pengawas")       sum.revoked   += c;
-        else if (s.status === "EDITED BY Admin Kabupaten") sum.edited    += c;
-        else if (s.status === "EDITED BY Pengawas")        sum.edited    += c;
+        if (s.status === "OPEN") sum.open += c;
+        else if (s.status === "DRAFT") sum.draft += c;
+        else if (s.status === "SUBMITTED BY Pencacah") sum.submitted += c;
+        else if (s.status === "APPROVED BY Pengawas") sum.approved += c;
+        else if (s.status === "REJECTED BY Pengawas") sum.rejected += c;
+        else if (s.status === "REVOKED BY Pengawas") sum.revoked += c;
+        else if (s.status === "EDITED BY Admin Kabupaten") sum.edited += c;
+        else if (s.status === "EDITED BY Pengawas") sum.edited += c;
       });
     });
   });
 
-  sum.reviewed  = sum.approved + sum.edited + sum.rejected + sum.revoked;
+  sum.reviewed = sum.approved + sum.edited + sum.rejected + sum.revoked;
   sum.completed = sum.submitted + sum.reviewed;
 
   const pct = (n) =>
     sum.assignment > 0 ? Number(((n / sum.assignment) * 100).toFixed(2)) : 0;
 
-  sum.progressSubmit  = pct(sum.submitted);
+  sum.progressSubmit = pct(sum.submitted);
   sum.progressApprove = pct(sum.approved);
-  sum.progressReview  = pct(sum.reviewed);
-  sum.progressTotal   = pct(sum.completed);
+  sum.progressReview = pct(sum.reviewed);
+  sum.progressTotal = pct(sum.completed);
 
   return sum;
 }
 
 /*
 |--------------------------------------------------------------------------
-| Memuat snapshot hari sebelumnya
+| Memuat snapshot hari sebelumnya (DENGAN KONVERSI EMAIL -> NAMA)
 |--------------------------------------------------------------------------
 */
 async function loadPreviousDay(referenceDate) {
   try {
     const roleParam = comparisonRole();
-    let url = "api/history.php?action=previous&role=" + encodeURIComponent(roleParam);
+    let url =
+      "api/history.php?action=previous&role=" + encodeURIComponent(roleParam);
     if (referenceDate && /^\d{4}-\d{2}-\d{2}$/.test(referenceDate)) {
       url += "&before=" + encodeURIComponent(referenceDate);
     }
@@ -164,9 +179,18 @@ async function loadPreviousDay(referenceDate) {
     Comparison.previousSummary = aggregateRaw(payload.data);
 
     payload.data.forEach((user) => {
-      const key = (user.username || "").toLowerCase();
-      if (!key) return;
-      Comparison.previousMap[key] = calcProgressFromRaw(user);
+      // ---> PERBAIKAN DI SINI: Konversi email historis menjadi nama asli
+      const rawKey = (user.username || "").trim().toLowerCase();
+      if (!rawKey) return;
+
+      const mappedName =
+        typeof USERNAME_MAP !== "undefined" && USERNAME_MAP[rawKey]
+          ? USERNAME_MAP[rawKey]
+          : user.username;
+
+      // Simpan menggunakan kunci nama asli (huruf kecil) agar cocok dengan Dashboard hari ini
+      Comparison.previousMap[mappedName.toLowerCase()] =
+        calcProgressFromRaw(user);
     });
 
     Comparison.available = true;
@@ -186,7 +210,9 @@ async function loadPreviousDay(referenceDate) {
 function buildComparisonItems() {
   Comparison.items = (Dashboard.enumerators || []).map((e) => {
     const today = calcProgressFromProcessed(e);
+    // Kunci pencarian sekarang harus berupa nama asli huruf kecil (karena e.username sudah diubah jadi nama)
     const key = (e.username || "").toLowerCase();
+
     const yesterday = Comparison.previousMap[key];
     const hasYesterday = typeof yesterday === "number";
     const delta = hasYesterday ? Number((today - yesterday).toFixed(2)) : null;
@@ -202,7 +228,7 @@ function buildComparisonItems() {
   console.log(
     `[Comparison] role=${comparisonRole()} today=${Comparison.items.length} | prev(${
       Comparison.previousDate || "-"
-    })=${Object.keys(Comparison.previousMap).length} | matched=${matched}`
+    })=${Object.keys(Comparison.previousMap).length} | matched=${matched}`,
   );
 }
 
@@ -238,11 +264,13 @@ function renderComparison() {
   const items = Comparison.items;
 
   const topHigh = [...items].sort((a, b) => b.today - a.today).slice(0, 5);
-  const topLow  = [...items].sort((a, b) => a.today - b.today).slice(0, 5);
+  const topLow = [...items].sort((a, b) => a.today - b.today).slice(0, 5);
 
-  const withDelta   = items.filter((x) => x.delta !== null);
-  const topGain     = [...withDelta].sort((a, b) => b.delta - a.delta).slice(0, 5);
-  const topLowGain  = [...withDelta].sort((a, b) => a.delta - b.delta).slice(0, 5);
+  const withDelta = items.filter((x) => x.delta !== null);
+  const topGain = [...withDelta].sort((a, b) => b.delta - a.delta).slice(0, 5);
+  const topLowGain = [...withDelta]
+    .sort((a, b) => a.delta - b.delta)
+    .slice(0, 5);
 
   root.innerHTML = `
     ${renderRankCard({
@@ -291,7 +319,16 @@ function renderComparison() {
 | Helper: render 1 kartu ranking
 |--------------------------------------------------------------------------
 */
-function renderRankCard({ id, icon, iconColor, title, list, mode, valueClass, empty }) {
+function renderRankCard({
+  id,
+  icon,
+  iconColor,
+  title,
+  list,
+  mode,
+  valueClass,
+  empty,
+}) {
   let body = "";
 
   if (empty) {
@@ -341,8 +378,12 @@ function renderRankCard({ id, icon, iconColor, title, list, mode, valueClass, em
 }
 
 function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+  return String(str).replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ],
   );
 }
 
